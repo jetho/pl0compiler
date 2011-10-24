@@ -1,0 +1,22 @@
+PROCEDURE proc1;
+  VAR x;  
+  PROCEDURE proc2;
+    VAR y;    
+    PROCEDURE proc3;
+      BEGIN
+        x := 5;
+      	y := 6;
+      END;
+    	
+    BEGIN
+      CALL proc3;
+      !y
+    END;    
+
+  BEGIN
+    CALL proc2;
+    !x
+  END;
+ 
+CALL proc1
+.

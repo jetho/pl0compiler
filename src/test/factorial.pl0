@@ -1,0 +1,26 @@
+VAR f;
+
+PROCEDURE fact;
+  VAR x, result;
+  
+  PROCEDURE fact1;
+    BEGIN
+      IF x <= f THEN
+        BEGIN
+          result := result * x;
+          x := x + 1;
+          CALL fact1;
+        END;
+    END;
+    
+  BEGIN
+    x := 1;
+    result := 1;
+    CALL fact1;
+    ! result;
+  END;
+
+BEGIN
+  f := 6;  
+  CALL fact;
+END.
