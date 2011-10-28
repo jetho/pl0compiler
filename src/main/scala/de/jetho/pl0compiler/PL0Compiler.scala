@@ -19,11 +19,10 @@ object PL0Compiler {
                            None
     }
 
-  def writeOutputFile(outfile: String, code: List[Instruction]) =
+  def writeOutputFile(outfile: String, code: List[Instruction]) = {
+    val objectFile = new FileOutputStream (outfile)
     try {
-      val objectFile = new FileOutputStream (outfile)
       val objectStream = new DataOutputStream (objectFile)
-
       code.foreach { 
         case Instruction(op, r, n, d) => { 
           objectStream.writeInt(op)
@@ -31,12 +30,9 @@ object PL0Compiler {
           objectStream.writeInt(n)
           objectStream.writeInt(d)
         }
-      }
-      objectFile.close
-    } catch {
-      case e: Exception => Console.err.println(e)
-    }
-
+      }      
+    } finally { objectFile.close }
+  }
 
   // use Failure Monad to check and interpret the program
   def interpret(file: String) =
