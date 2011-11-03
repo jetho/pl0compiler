@@ -13,7 +13,7 @@ object PL0Compiler {
 
   def readFile(file: String): Option[String] = 
     try {
-      Some(fromFile(file).getLines.mkString("\n"))
+      Some(fromFile(file).mkString)
     } catch {
       case e: Exception => Console.err.println(e)
                            None
