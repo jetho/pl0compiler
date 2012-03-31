@@ -1,5 +1,5 @@
 
-/** The instruction and register sets of the TAM Abstract machine.*/
+/** The instruction and register sets for the TAM Abstract machine.*/
 
 
 package de.jetho.pl0compiler

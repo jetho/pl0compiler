@@ -1,5 +1,5 @@
 
-/** Typechecker for the AST model of the PL/0 program.*/
+/** Typechecker for the AST.*/
 
 
 package de.jetho.pl0compiler

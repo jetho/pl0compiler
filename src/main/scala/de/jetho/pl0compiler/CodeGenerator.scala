@@ -1,5 +1,5 @@
 
-/** The CodeGenerator emits bytecode for the TAM Abstract machine.*/
+/** The Code Generator emits bytecode for the TAM Abstract machine.*/
 
 
 package de.jetho.pl0compiler
@@ -40,7 +40,7 @@ object CodeGenerator {
       }
     }
 
-  /** register reolution for nested prodedure calls.*/
+  /** register resolution for nested prodedure calls.*/
   def displayRegister(currentLevel: Int, objectLevel: Int) =
     objectLevel match { 
       case 0 => Instruction.rSB
@@ -208,4 +208,5 @@ object CodeGenerator {
     )
   
 }
+
 	    

@@ -1,5 +1,5 @@
 
-/** The parser for the PL/0 language. See the "grammar" for a BNF representation.*/
+/** The parser for the PL/0 language. See the "grammar" file for the corresponding BNF representation.*/
 
 
 package de.jetho.pl0compiler

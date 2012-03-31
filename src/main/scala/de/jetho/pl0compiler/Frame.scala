@@ -1,5 +1,5 @@
 
-/** Frame class for storing the nesting level and offset.*/
+/** Frame class for storing the nesting level and offset of blocks.*/
 
 
 package de.jetho.pl0compiler

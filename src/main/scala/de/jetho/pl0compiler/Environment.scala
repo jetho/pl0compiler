@@ -1,5 +1,5 @@
 
-/** The environment structure for implementing lexical scoping. Used by the typechecker and interpreter.*/
+/** The environment structure for implementing lexical scoping.*/
 
 
 package de.jetho.pl0compiler
@@ -7,11 +7,11 @@ package de.jetho.pl0compiler
 import scala.collection.mutable.Map
 
 
-/** The Environment stores binding ids and their values.
-    Holds a reference to its parent Environment (containing scope).*/
+/** An environment stores the ids and values of the bindings in a lexical scope.
+    It holds a reference to its parent environment (the containing scope).*/
 class Environment[T](ids: Map[String, T], parent: Option[Environment[T]]) {
     
-  /** create a nested environment by creating a new one with the current as parent.*/
+  /** produce a nested environment by creating a new one with the current as parent.*/
   def extend(bindings: List[(String, T)]) = new Environment(Map(bindings : _*), Some(this))
   
   /** lookup the binding for id in the current lexical scope or in the containing scope.*/
@@ -32,7 +32,7 @@ class Environment[T](ids: Map[String, T], parent: Option[Environment[T]]) {
 }
 
 
-/** The empty environment is used as initial environment when starting typechecking, interpreting or compiling.*/
+/** The empty environment is used as initial environment.*/
 object EmptyEnvironment {
   
   def apply[T] = new Environment(Map[String,T](), None)
