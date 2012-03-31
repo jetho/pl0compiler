@@ -66,21 +66,21 @@ object Semant {
     }
 
 
-  /** check if a identifier references a valid variable or constant.*/
+  /** check if an identifier references a valid variable or constant.*/
   def checkForValue(ident: String, env: SemanticEnvironment) = env.resolve(ident) match {
     case Some(_: VarDecl) => None
     case Some(_: ConstDecl) => None
     case _ => Some("Not a valid Variable or Constant: " + ident + "!")
   }
    
-  /** check if a identifier references a valid variable.*/
+  /** check if an identifier references a valid variable.*/
   def checkForVariable(ident: String, env: SemanticEnvironment) = env.resolve(ident) match {
     case Some(_: VarDecl) => None
     case Some(_: ConstDecl) => Some("Illegal Assignment to Constant " + ident + "!")
     case _ => Some("Undefined Variable " + ident + "!")
   }
 
-  /** check if a identifier references a valid procedure.*/
+  /** check if an identifier references a valid procedure.*/
   def checkForProcedure(ident: String, env: SemanticEnvironment) = env.resolve(ident) match {
     case Some(_: ProcDecl) => None   
     case _ => Some("Undefined Procedure " + ident + "!")
