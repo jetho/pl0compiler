@@ -1,4 +1,7 @@
 
+/** Typechecker for the AST model of the PL/0 program.*/
+
+
 package de.jetho.pl0compiler
 
 
@@ -8,15 +11,18 @@ object Semant {
   type SemanticEnvironment = Environment[Declaration]
 
  
+  /** check the AST for type errors.*/
   def check(ast: AST): Option[AST] = 
     checkAst(ast, EmptyEnvironment[Declaration]) match {
       case Nil => Some(ast)
-      case list => list.foreach{ Console.err.println(_) }
+      case list => list.foreach { Console.err.println(_) }
                    None
     } 
     
+  /** helper function for type checking a list of AST nodes.*/
   def checkAstList(asts: List[AST], env: SemanticEnvironment): List[ErrorMessage] = asts.map { checkAst(_, env) }.flatten
 
+  /** typecheck the various language constructs.*/
   def checkAst(ast: AST, env: SemanticEnvironment): List[ErrorMessage] = 
     ast match {
 
@@ -60,18 +66,21 @@ object Semant {
     }
 
 
+  /** check if a identifier references a valid variable or constant.*/
   def checkForValue(ident: String, env: SemanticEnvironment) = env.resolve(ident) match {
     case Some(_: VarDecl) => None
     case Some(_: ConstDecl) => None
     case _ => Some("Not a valid Variable or Constant: " + ident + "!")
   }
    
+  /** check if a identifier references a valid variable.*/
   def checkForVariable(ident: String, env: SemanticEnvironment) = env.resolve(ident) match {
     case Some(_: VarDecl) => None
     case Some(_: ConstDecl) => Some("Illegal Assignment to Constant " + ident + "!")
     case _ => Some("Undefined Variable " + ident + "!")
   }
 
+  /** check if a identifier references a valid procedure.*/
   def checkForProcedure(ident: String, env: SemanticEnvironment) = env.resolve(ident) match {
     case Some(_: ProcDecl) => None   
     case _ => Some("Undefined Procedure " + ident + "!")

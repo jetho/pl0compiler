@@ -1,4 +1,7 @@
 
+/** The algebraic data types for the AST structure.*/
+
+
 package de.jetho.pl0compiler
 
 

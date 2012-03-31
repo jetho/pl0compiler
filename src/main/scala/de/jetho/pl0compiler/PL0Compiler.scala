@@ -1,4 +1,7 @@
 
+/** The main module of the compiler.*/
+
+
 package de.jetho.pl0compiler
 
 import scala.io.Source._
@@ -19,6 +22,7 @@ object PL0Compiler {
                            None
     }
 
+  /** generate object file.*/
   def writeOutputFile(outfile: String, code: List[Instruction]) = {
     val objectFile = new FileOutputStream (outfile)
     try {
@@ -34,7 +38,7 @@ object PL0Compiler {
     } finally { objectFile.close }
   }
 
-  // use Failure Monad to check and interpret the program
+  /** use Failure Monad to check and interpret the program.*/
   def interpret(file: String) =
     for { 
       src  <- readFile(file) 
@@ -42,8 +46,7 @@ object PL0Compiler {
       _    <- Semant.check(ast)      
     } TreeInterpreter.eval(ast)    
     
-
-  // use Failure Monad to check and compile the program
+  /** use Failure Monad to check and compile the program.*/
   def compile(file: String, outfile: String) = 
     for {
       src  <- readFile(file)
@@ -52,7 +55,7 @@ object PL0Compiler {
       code <- CodeGenerator.encode(ast)
     } writeOutputFile(outfile, code)
 
-
+  
   def main(args: Array[String]) {    
     args.toList match {
       case "-i" :: srcfile :: Nil => interpret(srcfile)

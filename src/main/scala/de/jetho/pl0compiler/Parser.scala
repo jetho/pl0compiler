@@ -1,4 +1,7 @@
 
+/** The parser for the PL/0 language. See the "grammar" for a BNF representation.*/
+
+
 package de.jetho.pl0compiler
 
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers

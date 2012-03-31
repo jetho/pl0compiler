@@ -1,4 +1,7 @@
 
+/** The instruction and register sets of the TAM Abstract machine.*/
+
+
 package de.jetho.pl0compiler
 
 
@@ -10,6 +13,7 @@ object Instruction {
   val CB = 0
   val PB = 1024
 
+  /** the instruction set.*/
   val List(opLOAD, 
 	   opLOADA, 
 	   opLOADI, 
@@ -28,9 +32,10 @@ object Instruction {
 	   opHALT) = 0.until(16).toList
 
 
-
+  /** the set of registers.*/
   val List(rCB, rCT, rPB, rPT, rSB, rST, rHB, rHT, rLB, rL1, rL2, rL3, rL4, rL5, rL6, rCP) = 0.until(16).toList
 
+  /** the offsets for the primitive routines.*/
   val List(addDisplacement,
 	   subDisplacement,
 	   multDisplacement,

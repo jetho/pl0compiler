@@ -1,4 +1,7 @@
 
+/** The CodeGenerator emits bytecode for the TAM Abstract machine.*/
+
+
 package de.jetho.pl0compiler
 
 
@@ -9,6 +12,7 @@ object CodeGenerator {
   var nextInstrAddress = Instruction.CB
   val code = new Array[Instruction](Instruction.PB)
 
+  /** fills the array with bytecode instructions.*/
   def emit(op: Int, n: Int, r: Int, d: Int): Int = { 
     if(nextInstrAddress > Instruction.PB)
       sys.error("Can't process more than " + Instruction.PB + " Instructions!")
@@ -18,11 +22,13 @@ object CodeGenerator {
     instrAddress
   }
 
+  /** utility function for code backpatching.*/
   def patch(address: Int, register: Option[Int], displacement: Option[Int]) { 
     register.map { code(address).r = _ }
     displacement.map { code(address).d = _ }    
   }
 
+  /** backpatching for procedure calls.*/
   def patchProcCalls(patchLocations: List[PatchLocation]) { 
     patchLocations.foreach { 
       case PatchLocation(location, ident, env, frame) =>  
@@ -34,6 +40,7 @@ object CodeGenerator {
       }
     }
 
+  /** register reolution for nested prodedure calls.*/
   def displayRegister(currentLevel: Int, objectLevel: Int) =
     objectLevel match { 
       case 0 => Instruction.rSB
@@ -41,6 +48,7 @@ object CodeGenerator {
       case _ => sys.error("Can't access data more than 6 levels out!")
     }
 
+  /** generate TAM bytecode and backpatch if necessary.*/
   def encode(ast: AST): Option[List[Instruction]] = { 
     val globalFrame = Frame(0, 0)
     val globalEnv = EmptyEnvironment[RuntimeEntity].extend(primitiveRoutines())
@@ -50,14 +58,16 @@ object CodeGenerator {
     Some(code.toList.take(nextInstrAddress))
   }  
 
+  /** generate bytecode for the various AST nodes.
+      return locations that need code backpatching.*/
   def encodeAst(ast: AST, env: RuntimeEnvironment, currentFrame: Frame): List[PatchLocation] = 
-    ast match { 
+    ast match {       
       
       case Block(constDecls, varDecls, procDecls, statement) => { 
-	val constBindings = constDecls.map{ case ConstDecl(id, num) => (id, Constant(num)) }
-	val varBindings = varDecls.zipWithIndex.map{ case (varDecl, index) => 
+	val constBindings = constDecls.map { case ConstDecl(id, num) => (id, Constant(num)) }
+	val varBindings = varDecls.zipWithIndex.map { case (varDecl, index) => 
 	  (varDecl.ident, Variable(EntityAddress(currentFrame.level, currentFrame.offset + index))) }
-	val procBindings = procDecls.map{ procDecl => (procDecl.ident, Proc(None)) }
+	val procBindings = procDecls.map { procDecl => (procDecl.ident, Proc(None)) }
 	if (varBindings.length > 0)
 	  emit(Instruction.opPUSH, 0, 0, varBindings.length)
         val newLexicalEnvironment = env.extend( constBindings ::: varBindings ::: procBindings )
@@ -169,6 +179,7 @@ object CodeGenerator {
     }
 
 
+  /** encode procedure calls.*/
   def encodeRoutineCall(ident: String, proc: RuntimeEntity, currentFrame: Frame) = 
     proc match {    
       case Proc(Some(EntityAddress(addressLevel, displacement))) =>  
@@ -178,6 +189,7 @@ object CodeGenerator {
       case _ => sys.error("Unknown Routine " + ident)
     }
   
+  /** addresses of the primitive routines.*/
   def primitiveRoutines(): List[(String, PrimitiveRoutine)] =  
     List(
       ("!", PrimitiveRoutine(Instruction.putintDisplacement)),

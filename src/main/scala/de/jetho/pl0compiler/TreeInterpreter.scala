@@ -1,4 +1,7 @@
 
+/** Recursive AST based interpreter.*/
+
+
 package de.jetho.pl0compiler
 
 
@@ -7,17 +10,20 @@ object TreeInterpreter {
   type EvalEnvironment = Environment[Binding]
 
   
+  /** evaluate the AST starting out with an empty environment.*/
   def eval(ast: AST) = evalAst(ast, EmptyEnvironment[Binding])
 
+  /** interpret the various language constructs recursively.*/
   def evalAst(ast: AST, env: EvalEnvironment) {
     ast match {
       
+      /** interpret a block by creating a new lexical environment.*/
       case Block(constDecls, varDecls, procDecls, statement) => 
         statement.map { 
           stmt => {
-            val constBindings = constDecls.map{ case ConstDecl(id, num) => (id, Number(num)) }
-            val varBindings = varDecls.map{ varDecl => (varDecl.ident, Number(0)) }
-            val procBindings = procDecls.map{ procDecl => (procDecl.ident, NullBinding) }
+            val constBindings = constDecls.map { case ConstDecl(id, num) => (id, Number(num)) }
+            val varBindings = varDecls.map { varDecl => (varDecl.ident, Number(0)) }
+            val procBindings = procDecls.map { procDecl => (procDecl.ident, NullBinding) }
             val extendedEnvironment = env.extend( constBindings ::: varBindings ::: procBindings )
             procDecls.foreach { case ProcDecl(id, block) => extendedEnvironment.update(id, Closure(block, extendedEnvironment)) }
             evalAst(stmt, extendedEnvironment)
@@ -38,6 +44,7 @@ object TreeInterpreter {
     }
   }
 
+  /** evalutate a numeric expression.*/
   def evalExpression(expr: Expr, env: EvalEnvironment): Int = 
     expr match {
       case BinOp(op, left, right) => {
@@ -54,6 +61,7 @@ object TreeInterpreter {
       case Ident(name) => env.resolve(name).map{ case Number(n) => n }.getOrElse(sys.error("Illegal Number"))
     }
 
+  /** evaluate a boolean condition.*/
   def evalCondition(condition: Condition, env: EvalEnvironment): Boolean =
     condition match {
       case OddCondition(expr) => (evalExpression(expr, env) % 2) == 1
