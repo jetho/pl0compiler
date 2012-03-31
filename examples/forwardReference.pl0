@@ -1,0 +1,13 @@
+PROCEDURE proc1;
+  PROCEDURE proc2;
+    PROCEDURE proc3;
+      CALL proc4;
+    CALL proc3;
+   
+  PROCEDURE proc4;
+    !7;
+       
+  CALL proc2;
+ 
+CALL proc1
+.
