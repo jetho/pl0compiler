@@ -44,7 +44,7 @@ object TreeInterpreter {
     }
   }
 
-  /** evalutate a numeric expression.*/
+  /** evaluate a numeric expression.*/
   def evalExpression(expr: Expr, env: EvalEnvironment): Int = 
     expr match {
       case BinOp(op, left, right) => {
