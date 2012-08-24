@@ -49,7 +49,7 @@ object PL0Compiler {
       src <- readFile(file).liftFailNel
       ast <- PL0Parser.parse(src).liftFailNel
       _   <- Semant.check(ast)
-	 } yield ast
+    } yield ast
 
 
   /** analyze and interpret the program.*/
