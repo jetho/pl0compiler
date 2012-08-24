@@ -1,26 +1,30 @@
 
-/** The main module of the compiler.*/
+/** The main module.*/
 
 
 package de.jetho.pl0compiler
 
 import scala.io.Source._
 import java.io.{ FileOutputStream, DataOutputStream }
+import scalaz._
+import Scalaz._
 
 
 object PL0Compiler {
 
-  val usage = """
+  def usage = """
     Usage: scala PL0Compiler [-i] srcfile [destfile]
   """
 
-  def readFile(file: String): Option[String] = 
+
+  def printErrors = (errors: NonEmptyList[String]) => errors.foreach(println)
+
+
+  def readFile(file: String): Validation[String, String] = 
     try {
-      Some(fromFile(file).mkString)
-    } catch {
-      case e: Exception => Console.err.println(e)
-                           None
-    }
+      fromFile(file).mkString.success
+    } catch { case e: Exception => e.toString.fail }
+
 
   /** generate object file.*/
   def writeOutputFile(outfile: String, code: List[Instruction]) = {
@@ -38,22 +42,27 @@ object PL0Compiler {
     } finally { objectFile.close }
   }
 
-  /** use Failure Monad to check and interpret the program.*/
+
+  /** execute the front end parts.*/
+  def parseAndCheck(file: String): ValidationNEL[String, AST] =
+	  for {
+	     src <- readFile(file).liftFailNel
+       ast <- PL0Parser.parse(src).liftFailNel
+		   _   <- Semant.check(ast)
+	  } yield ast
+
+
+  /** analyze and interpret the program.*/
   def interpret(file: String) =
-    for { 
-      src  <- readFile(file) 
-      ast  <- PL0Parser.parse(src)
-      _    <- Semant.check(ast)      
-    } TreeInterpreter.eval(ast)    
-    
-  /** use Failure Monad to check and compile the program.*/
-  def compile(file: String, outfile: String) = 
-    for {
-      src  <- readFile(file)
-      ast  <- PL0Parser.parse(src)
-      _    <- Semant.check(ast)
-      code <- CodeGenerator.encode(ast)
-    } writeOutputFile(outfile, code)
+	  parseAndCheck(file).fold(printErrors, TreeInterpreter.eval(_))
+   
+
+ 
+
+  def compile(file: String, outfile: String) = {
+    val result = parseAndCheck(file)
+    result.fold(printErrors)
+  }
 
   
   def main(args: Array[String]) {    

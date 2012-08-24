@@ -10,11 +10,11 @@ case class Instruction(op: Int, var r: Int, n: Int, var d: Int)
 
 object Instruction { 
 
-  val CB = 0
-  val PB = 1024
+  final val CB = 0
+  final val PB = 1024
 
   /** the instruction set.*/
-  val List(opLOAD, 
+  final val List(opLOAD, 
 	   opLOADA, 
 	   opLOADI, 
 	   opLOADL, 
@@ -33,10 +33,10 @@ object Instruction {
 
 
   /** the set of registers.*/
-  val List(rCB, rCT, rPB, rPT, rSB, rST, rHB, rHT, rLB, rL1, rL2, rL3, rL4, rL5, rL6, rCP) = 0.until(16).toList
+  final val List(rCB, rCT, rPB, rPT, rSB, rST, rHB, rHT, rLB, rL1, rL2, rL3, rL4, rL5, rL6, rCP) = 0.until(16).toList
 
   /** the offsets for the primitive routines.*/
-  val List(addDisplacement,
+  final val List(addDisplacement,
 	   subDisplacement,
 	   multDisplacement,
 	   divDisplacement,
@@ -48,7 +48,7 @@ object Instruction {
 	   eqDisplacement,
 	   neDisplacement) = 8.until(19).toList
 
-  val puteolDisplacement = 24
-  val putintDisplacement = 26
+  final val puteolDisplacement = 24
+  final val putintDisplacement = 26
 
 }

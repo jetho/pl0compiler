@@ -5,6 +5,8 @@
 package de.jetho.pl0compiler
 
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
+import scalaz._
+import Scalaz._
 
 
 object PL0Parser extends StandardTokenParsers {   
@@ -60,14 +62,12 @@ object PL0Parser extends StandardTokenParsers {
                              | ident ^^ { Ident(_) } )
 
 
-  def parse(code: String): Option[AST] = {
+  def parse(code: String): Validation[String, AST] = {
     val tokens = new lexical.Scanner(code)
     phrase(program)(tokens) match {
-      case Success(ast, _) => Some(ast)
-      case e: NoSuccess =>
-        Console.err.println(e)
-        None
-    }
+      case Success(ast, _) => ast.success
+      case e: NoSuccess => e.toString.fail
+	 }
   }
 
 }
