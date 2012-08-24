@@ -45,18 +45,16 @@ object PL0Compiler {
 
   /** execute the front end parts.*/
   def parseAndCheck(file: String): ValidationNEL[String, AST] =
-	  for {
-	     src <- readFile(file).liftFailNel
-       ast <- PL0Parser.parse(src).liftFailNel
-		   _   <- Semant.check(ast)
-	  } yield ast
+    for {
+      src <- readFile(file).liftFailNel
+      ast <- PL0Parser.parse(src).liftFailNel
+      _   <- Semant.check(ast)
+	 } yield ast
 
 
   /** analyze and interpret the program.*/
   def interpret(file: String) =
-	  parseAndCheck(file).fold(printErrors, TreeInterpreter.eval(_))
-   
-
+    parseAndCheck(file).fold(printErrors, TreeInterpreter.eval(_))
  
 
   def compile(file: String, outfile: String) = {

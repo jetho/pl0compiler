@@ -67,7 +67,7 @@ object PL0Parser extends StandardTokenParsers {
     phrase(program)(tokens) match {
       case Success(ast, _) => ast.success
       case e: NoSuccess => e.toString.fail
-	 }
+    }
   }
 
 }
