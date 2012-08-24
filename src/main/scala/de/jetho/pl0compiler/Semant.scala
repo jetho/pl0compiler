@@ -29,12 +29,12 @@ object Semant {
       case bl@ Block(constDecls, varDecls, procDecls, stmt) =>   
         // building a new lexical environment
         val bindings = constDecls ::: varDecls ::: procDecls
-        val newLexicalEnvironment = env.extend( bindings.map {decl => (decl.ident, decl)} )
+        val extendedEnv = env.extend( bindings.map {decl => (decl.ident, decl)} )
 
         // using an applicative functor for accumulating errors
         (checkUniqueness(bindings) |@|
-         checkAstList(procDecls, newLexicalEnvironment) |@|
-         stmt.map(checkAst(_, env)).getOrElse(stmt.successNel[String])) {
+         checkAstList(procDecls, extendedEnv) |@|
+         stmt.map(checkAst(_, extendedEnv)).getOrElse(stmt.successNel[String])) {
            (_, _, _) => bl
          }
 
@@ -43,7 +43,7 @@ object Semant {
       case as@ AssignStmt(ident, expr) => 
         (checkForVariable(ident, env).liftFailNel |@| checkAst(expr, env)) { (_, _) => as }
 
-      case CallStmt(ident) => checkForProcedure(ident, env).liftFailNel
+      case CallStmt(ident) => checkForProcedure(ident, env).liftFailNel 
 
       case PrintStmt(expr) => checkAst(expr, env)
 
@@ -76,7 +76,7 @@ object Semant {
   /** analyze if there are multiple definitions of the same identifier.*/
   def checkUniqueness(decls: List[Declaration]): ValidationNEL[String, List[Declaration]] = {
     def isUnique(declGroup: (String, List[Declaration])) = 
-      validation((declGroup._2.length > 1) either ("Multiple Definition of " + id) or declGroup._2.head)
+      validation((declGroup._2.length > 1) either ("Multiple Definition of " + declGroup._1) or declGroup._2.head)
    
     decls.groupBy(_.ident).map(isUnique(_).liftFailNel).toList.sequence[({type l[a]=ValidationNEL[String, a]})#l, Declaration]  
   }              
@@ -94,7 +94,7 @@ object Semant {
     }.getOrElse(("Not a valid Variable or Constant: " + ident + "!").fail)
 
 
-  def checkForVariable(ident: String, env: SemanticEnvironment) =
+  def checkForVariable(ident: String, env: SemanticEnvironment) = 
     checkIdentifier(ident, env) {
       case v: VarDecl => v.success
       case c: ConstDecl => ("Illegal Assignment to Constant " + ident + "!").fail
