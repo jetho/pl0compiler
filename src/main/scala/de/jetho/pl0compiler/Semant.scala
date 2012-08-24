@@ -82,7 +82,7 @@ object Semant {
   }              
     
   
-  /** look up the identifier and apply the given constraint.*/
+  /** lookup the identifier and apply the given constraint.*/
   def checkIdentifier(ident: String, env: SemanticEnvironment) (constraint: PartialFunction[AST, Validation[String, AST]]) =
     env.resolve(ident) flatMap constraint.lift
 
