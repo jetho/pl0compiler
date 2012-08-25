@@ -1,4 +1,3 @@
-
 /** Semantic Analyzer for the AST.*/
 
 
@@ -78,7 +77,8 @@ object Semant {
     def isUnique(declGroup: (String, List[Declaration])) = 
       validation((declGroup._2.length > 1) either ("Multiple Definition of " + declGroup._1) or declGroup._2.head)
    
-    decls.groupBy(_.ident).map(isUnique(_).liftFailNel).toList.sequence[({type l[a]=ValidationNEL[String, a]})#l, Declaration]  
+    val validatedDecls = decls.groupBy(_.ident).map(isUnique(_).liftFailNel).toList
+    validatedDecls.sequence[({type l[a]=ValidationNEL[String, a]})#l, Declaration]  
   }              
     
   
