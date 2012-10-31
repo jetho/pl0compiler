@@ -13,17 +13,17 @@ object Semant {
 
  
   /** check the AST for semantic errors.*/
-  def check(ast: AST): \/[List[String], AST] = 
-    checkAst(ast, EmptyEnvironment[Declaration]).bimap(_.toList, identity).disjunction
+  def analyze(ast: AST): \/[List[String], AST] = 
+    analyzeAst(ast, EmptyEnvironment[Declaration]).bimap(_.toList, identity).disjunction
 
 
   /** helper function for analyzing a list of AST nodes.*/
-  def checkAstList(asts: List[AST], env: SemanticEnvironment) = 
-    asts.map(checkAst(_, env)).sequence[({type l[a]=ValidationNEL[String, a]})#l, AST]    
+  def analyzeAsts(asts: List[AST], env: SemanticEnvironment) = 
+    asts.map(analyzeAst(_, env)).sequence[({type l[a]=ValidationNEL[String, a]})#l, AST]    
 
 
   /** analyze the various language constructs.*/
-  def checkAst(ast: AST, env: SemanticEnvironment): ValidationNEL[String, AST] = 
+  def analyzeAst(ast: AST, env: SemanticEnvironment): ValidationNEL[String, AST] = 
     ast match {
      
       case bl@ Block(constDecls, varDecls, procDecls, stmt) =>   
@@ -33,37 +33,37 @@ object Semant {
 
         // using an applicative functor for accumulating errors
         (checkUniqueness(bindings)            |@|
-         checkAstList(procDecls, extendedEnv) |@|
-         stmt.map(checkAst(_, extendedEnv)).getOrElse(stmt.successNel[String])) {
+         analyzeAsts(procDecls, extendedEnv) |@|
+         stmt.map(analyzeAst(_, extendedEnv)).getOrElse(stmt.successNel[String])) {
            (_, _, _) => bl
          }
 
-      case ProcDecl(ident, block) => checkAst(block, env) 
+      case ProcDecl(ident, block) => analyzeAst(block, env) 
 
       case as@ AssignStmt(ident, expr) => 
-        (checkForVariable(ident, env).toValidationNEL |@| checkAst(expr, env)) { (_, _) => as }
+        (checkForVariable(ident, env).toValidationNEL |@| analyzeAst(expr, env)) { (_, _) => as }
 
       case CallStmt(ident) => checkForProcedure(ident, env).toValidationNEL 
 
-      case PrintStmt(expr) => checkAst(expr, env)
+      case PrintStmt(expr) => analyzeAst(expr, env)
 
-      case sq@ SeqStmt(stmts) => checkAstList(stmts, env).map(_ => sq) 
+      case sq@ SeqStmt(stmts) => analyzeAsts(stmts, env).map(_ => sq) 
 
       case is@ IfStmt(condition, stmt) =>  
-        (checkAst(condition, env) |@| stmt.map(checkAst(_, env)).getOrElse(stmt.successNel[String])) {
+        (analyzeAst(condition, env) |@| stmt.map(analyzeAst(_, env)).getOrElse(stmt.successNel[String])) {
           (_, _) => is
         }          
 
       case ws@ WhileStmt(condition, stmt) => 
-        (checkAst(condition, env) |@| stmt.map(checkAst(_, env)).getOrElse(stmt.successNel[String])) {
+        (analyzeAst(condition, env) |@| stmt.map(analyzeAst(_, env)).getOrElse(stmt.successNel[String])) {
           (_, _) => ws
         }          
       
-      case OddCondition(expr) => checkAst(expr, env)
+      case OddCondition(expr) => analyzeAst(expr, env)
 
-      case bc@ BinaryCondition(_, left, right) =>  checkAstList(List(left, right), env).map(_ => bc) 
+      case bc@ BinaryCondition(_, left, right) =>  analyzeAsts(List(left, right), env).map(_ => bc) 
 
-      case bo@ BinOp(_, left, right) => checkAstList(List(left, right), env).map(_ => bo) 
+      case bo@ BinOp(_, left, right) => analyzeAsts(List(left, right), env).map(_ => bo) 
       
       case Ident(name) => checkForValue(name, env).toValidationNEL
 

@@ -44,21 +44,21 @@ object PL0Compiler {
 
 
   /** execute the front end parts.*/
-  def parseAndCheck(file: String): \/[List[String], AST] =
+  def parseAndAnalyze(file: String): \/[List[String], AST] =
     for {
       src <- readFile(file)
       ast <- PL0Parser.parse(src)
-      _   <- Semant.check(ast)
+      _   <- Semant.analyze(ast)
     } yield ast
 
 
   /** analyze and interpret the program.*/
   def interpret(file: String) =
-    parseAndCheck(file).fold(printErrors, TreeInterpreter.eval(_))
+    parseAndAnalyze(file).fold(printErrors, TreeInterpreter.eval(_))
  
 
 //  def compile(file: String, outfile: String) = {
-//    val result = parseAndCheck(file)
+//    val result = parseAndAnalyze(file)
 //    result.fold(printErrors)
 //  }
 
