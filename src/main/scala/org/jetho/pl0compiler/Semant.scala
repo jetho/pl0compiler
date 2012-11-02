@@ -13,8 +13,8 @@ object Semant {
 
  
   /** check the AST for semantic errors.*/
-  def analyze(ast: AST): \/[List[String], AST] = 
-    analyzeAst(ast, EmptyEnvironment[Declaration]).bimap(_.toList, identity).disjunction
+  def analyze(ast: AST): \/[String, AST] = 
+    analyzeAst(ast, EmptyEnvironment[Declaration]).bimap(_.toList.mkString("\n"), identity).disjunction
 
 
   /** helper function for analyzing a list of AST nodes.*/

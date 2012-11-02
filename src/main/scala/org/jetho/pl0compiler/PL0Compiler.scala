@@ -17,13 +17,13 @@ object PL0Compiler {
   """
 
 
-  def printErrors = (errors: List[String]) => errors.foreach(println)
+  //def printErrors = (errors: List[String]) => errors.foreach(println)
 
 
-  def readFile(file: String): \/[List[String], String] = 
+  def readFile(file: String): \/[String, String] = 
     try {
       fromFile(file).mkString.right
-    } catch { case e: Exception => List(e.toString).left }
+    } catch { case e: Exception => e.toString.left }
 
 
   /** generate object file.*/
@@ -44,7 +44,7 @@ object PL0Compiler {
 
 
   /** execute the front end parts.*/
-  def parseAndAnalyze(file: String): \/[List[String], AST] =
+  def parseAndAnalyze(file: String): \/[String, AST] =
     for {
       src <- readFile(file)
       ast <- PL0Parser.parse(src)
@@ -54,7 +54,7 @@ object PL0Compiler {
 
   /** analyze and interpret the program.*/
   def interpret(file: String) =
-    parseAndAnalyze(file).fold(printErrors, TreeInterpreter.eval(_))
+    parseAndAnalyze(file).fold(println, TreeInterpreter.eval(_))
  
 
 //  def compile(file: String, outfile: String) = {

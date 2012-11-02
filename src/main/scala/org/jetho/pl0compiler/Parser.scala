@@ -70,11 +70,11 @@ object PL0Parser extends StandardTokenParsers {
       | ident ^^ { Ident(_) } )
 
 
-  def parse(code: String): \/[List[String], AST] = {
+  def parse(code: String): \/[String, AST] = {
     val tokens = new lexical.Scanner(code)
     phrase(program)(tokens) match {
       case Success(ast, _) => ast.right
-      case e: NoSuccess => List(e.toString).left
+      case e: NoSuccess => e.toString.left
     }
   }
 
