@@ -32,7 +32,7 @@ object Semant {
         val extendedEnv = env.extend( bindings.map {decl => (decl.ident, decl)} )
 
         // using an applicative functor for accumulating errors
-        (checkUniqueness(bindings)            |@|
+        (checkUniqueness(bindings)           |@|
          analyzeAsts(procDecls, extendedEnv) |@|
          stmt.map(analyzeAst(_, extendedEnv)).getOrElse(stmt.successNel[String])) {
            (_, _, _) => bl
