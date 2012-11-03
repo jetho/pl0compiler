@@ -5,7 +5,7 @@
 package org.jetho.pl0compiler
 
 
-object CodeGenerator {
+object CodeGenerator_old {
 
   type RuntimeEnvironment = Environment[RuntimeEntity]
    

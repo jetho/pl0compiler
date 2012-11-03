@@ -19,7 +19,7 @@ object Semant {
 
   /** helper function for analyzing a list of AST nodes.*/
   def analyzeAsts(asts: List[AST], env: SemanticEnvironment) = 
-    asts.map(analyzeAst(_, env)).sequence[({type l[a]=ValidationNEL[String, a]})#l, AST]    
+    asts.map(analyzeAst(_, env)).sequenceU //[({type l[a]=ValidationNEL[String, a]})#l, AST]    
 
 
   /** analyze the various language constructs.*/

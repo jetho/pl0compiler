@@ -47,7 +47,7 @@ object CodeGenerator {
     /* patch the instructions or collect resulting errors by sequencing Validations;
        convert the result to an Either type.*/
     code.map(patch(_).toValidationNEL)
-        .sequence[({type l[a]=ValidationNEL[String, a]})#l, Instruction]
+        .sequenceU//[({type l[a]=ValidationNEL[String, a]})#l, Instruction]
         .bimap(_.toList.mkString("\n"), identity)
         .disjunction
   }
@@ -66,6 +66,25 @@ object CodeGenerator {
 
 
   def encodeAst(ast: AST, env: RuntimeEnvironment, frame: Frame): StateTEither[CodeBlock] = emit(Instruction.opHALT, 0, 0, 0)
+
+
+    /** addresses of the primitive routines.*/
+  def primitiveRoutines(): List[(String, PrimitiveRoutine)] =  
+    List(
+      ("!", PrimitiveRoutine(Instruction.putintDisplacement)),
+      ("$puteol", PrimitiveRoutine(Instruction.puteolDisplacement)),
+      ("-", PrimitiveRoutine(Instruction.subDisplacement)),
+      ("+", PrimitiveRoutine(Instruction.addDisplacement)),
+      ("*", PrimitiveRoutine(Instruction.multDisplacement)),
+      ("/", PrimitiveRoutine(Instruction.divDisplacement)),
+      ("$mod", PrimitiveRoutine(Instruction.modDisplacement)),
+      ("<", PrimitiveRoutine(Instruction.ltDisplacement)),
+      ("<=", PrimitiveRoutine(Instruction.leDisplacement)),
+      (">=", PrimitiveRoutine(Instruction.geDisplacement)),
+      (">", PrimitiveRoutine(Instruction.gtDisplacement)),
+      ("=", PrimitiveRoutine(Instruction.eqDisplacement)),
+      ("#", PrimitiveRoutine(Instruction.neDisplacement))     
+    )
 
 }
 
