@@ -36,7 +36,9 @@ object CodeGenerator {
   def fail[A](msg: String) = 
     StateT[Result, Int, A](_ => msg.left[(Int, A)])
   
-  def sum(ints: Int*) = ints.sum 
+  def sum(ints: Int*) = ints.sum
+
+  def merge(dlists: DList[Instruction]*) = dlists.fold(DList[Instruction]())( _ ++ _)
 
   
   /** functions for modifying the state.*/
@@ -98,7 +100,7 @@ object CodeGenerator {
     for {
       (l1, code) <- encodeAst(ast, globalEnv, globalFrame)
       (l2, halt) <- emit(Instruction.opHALT, 0, 0, 0)
-    } yield ( sum(l1, l2), code ++ halt )
+    } yield ( sum(l1, l2), merge(code, halt) )
   }
 
   
@@ -113,7 +115,7 @@ object CodeGenerator {
                       else skip
           (l4, c4) <- encodeAst(CallStmt(cond), env, frame)
         } yield ( sum(l1, l2, l3 ,l4), 
-                  c1 ++ c2 ++ c3 ++ c4 )
+                  merge(c1, c2, c3, c4) )
 
       case OddCondition(expr) => 
         for {
@@ -124,14 +126,14 @@ object CodeGenerator {
           (l5, c5) <- emitAndIncr(Instruction.opLOADL, 0, 0, 1)
           (l6, c6) <- encodeAst(CallStmt("#"), env, frame)
         } yield ( sum(l1, l2, l3, l4, l5, l6), 
-                  c1 ++ c2 ++ c3 ++ c4 ++ c5 ++ c6 )
+                  merge(c1, c2, c3, c4, c5, c6) )
 
       case BinOp(op, left, right) => 
         for {
           (l1, c1) <- encodeAst(left, env, frame)
           (l2, c2) <- encodeAst(right, env, frame)
           (l3, c3) <- encodeAst(CallStmt(op), env, frame)
-        } yield ( sum(l1, l2, l3), c1 ++ c2 ++ c3 )
+        } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
 
       case Ident(name) => 
         env.resolve(name) match {
