@@ -23,7 +23,7 @@ object CodeGenerator {
 
 
   /** generate the code and patch the forward references.*/
-  def encode(ast: AST): \/[String, List[Instruction]] =      
+  def encodeAst(ast: AST): \/[String, List[Instruction]] =      
     for { 
       (len, code) <- encodeProgram(ast) eval 0
       _ <- checkLength(len)
@@ -97,23 +97,35 @@ object CodeGenerator {
     val globalFrame = Frame(0, 0)
     val globalEnv = EmptyEnvironment[RuntimeEntity].extend(primitiveRoutines())
     for {
-      (l1, code) <- encodeAst(ast, globalEnv, globalFrame)
+      (l1, code) <- encode(ast, globalEnv, globalFrame)
       (l2, halt) <- emit(Instruction.opHALT, 0, 0, 0)
     } yield ( sum(l1, l2), merge(code, halt) )
   }
 
   
-  def encodeAst(ast: AST, env: RuntimeEnvironment, frame: Frame): StateTEither[CodeBlock] = 
+  def encode(ast: AST, env: RuntimeEnvironment, frame: Frame): StateTEither[CodeBlock] = 
     ast match {
       
       case SeqStmt(stmts) => 
         for {
-          resList <- stmts.map( encodeAst(_, env, frame) ).sequenceU 
+          resList <- stmts.map( encode(_, env, frame) ).sequenceU 
         } yield ( sum(resList.map(_._1) :_*), merge(resList.map(_._2) :_*) )
+
+      case CallStmt(ident) => 
+        env.resolve(ident) match { 
+	      case Some(Proc(None)) => 
+          //  emitAndIncr(Instruction.opCALL_DUMMY, 
+	      //  val patchLocation = PatchLocation(nextInstrAddress, ident, env, currentFrame)
+	        emit(Instruction.opCALL, Instruction.rSB, Instruction.rCB, 0)
+	      //  Some(patchLocation) 
+	  	  case Some(proc) => 
+	        encodeRoutineCall(ident, proc, frame)
+          case _ => fail("Unkown routine " + ident)
+        }
 
       case AssignStmt(ident, expr) => 
         for {
-          (l1, c1) <- encodeAst(expr, env, frame)
+          (l1, c1) <- encode(expr, env, frame)
           (l2, c2) <- env.resolve(ident) match { 
                         case Some(Variable(EntityAddress(addressLevel, displacement))) =>
                           for {
@@ -126,37 +138,37 @@ object CodeGenerator {
 
       case PrintStmt(expr) => 
         for {
-          (l1, c1) <- encodeAst(expr, env, frame)
-          (l2, c2) <- encodeAst(CallStmt("!"), env, frame)
-          (l3, c3) <- encodeAst(CallStmt("$puteol"), env, frame)
+          (l1, c1) <- encode(expr, env, frame)
+          (l2, c2) <- encode(CallStmt("!"), env, frame)
+          (l3, c3) <- encode(CallStmt("$puteol"), env, frame)
         } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
 
       case BinaryCondition(cond, left, right) => 
         for {
-          (l1, c1) <- encodeAst(left, env, frame)
-          (l2, c2) <- encodeAst(right, env, frame)
+          (l1, c1) <- encode(left, env, frame)
+          (l2, c2) <- encode(right, env, frame)
           (l3, c3) <- if (cond == "=" || cond == "#") emitAndIncr(Instruction.opLOADL, 0, 0, 1)
                       else skip
-          (l4, c4) <- encodeAst(CallStmt(cond), env, frame)
+          (l4, c4) <- encode(CallStmt(cond), env, frame)
         } yield ( sum(l1, l2, l3 ,l4), 
                   merge(c1, c2, c3, c4) )
 
       case OddCondition(expr) => 
         for {
-          (l1, c1) <- encodeAst(expr, env, frame)
+          (l1, c1) <- encode(expr, env, frame)
           (l2, c2) <- emitAndIncr(Instruction.opLOADL, 0, 0, 2)
-          (l3, c3) <- encodeAst(CallStmt("$mod"), env, frame)
+          (l3, c3) <- encode(CallStmt("$mod"), env, frame)
           (l4, c4) <- emitAndIncr(Instruction.opLOADL, 0, 0, 0)
           (l5, c5) <- emitAndIncr(Instruction.opLOADL, 0, 0, 1)
-          (l6, c6) <- encodeAst(CallStmt("#"), env, frame)
+          (l6, c6) <- encode(CallStmt("#"), env, frame)
         } yield ( sum(l1, l2, l3, l4, l5, l6), 
                   merge(c1, c2, c3, c4, c5, c6) )
 
       case BinOp(op, left, right) => 
         for {
-          (l1, c1) <- encodeAst(left, env, frame)
-          (l2, c2) <- encodeAst(right, env, frame)
-          (l3, c3) <- encodeAst(CallStmt(op), env, frame)
+          (l1, c1) <- encode(left, env, frame)
+          (l2, c2) <- encode(right, env, frame)
+          (l3, c3) <- encode(CallStmt(op), env, frame)
         } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
 
       case Ident(name) => 
@@ -174,10 +186,23 @@ object CodeGenerator {
 
       case _ => fail("Unknown AST-Node: " + ast)    
     }
+
+  
+  /** encode procedure calls.*/
+  def encodeRoutineCall(ident: String, proc: RuntimeEntity, frame: Frame): StateTEither[CodeBlock] = 
+    proc match {    
+      case Proc(Some(EntityAddress(addressLevel, displacement))) =>  
+        for {
+           reg    <- displayRegister(frame.level, addressLevel)
+           (l, c) <- emitAndIncr(Instruction.opCALL, reg, Instruction.rCB, displacement)
+        } yield (l, c) 
+      case PrimitiveRoutine(displacement) => 
+        emitAndIncr(Instruction.opCALL, Instruction.rSB, Instruction.rPB, displacement) 
+      case _ => fail("Unknown Routine " + ident)
+    }
   
 
-
-    /** addresses of the primitive routines.*/
+  /** addresses of the primitive routines.*/
   def primitiveRoutines(): List[(String, PrimitiveRoutine)] =  
     List(
       ("!", PrimitiveRoutine(Instruction.putintDisplacement)),
