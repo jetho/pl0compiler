@@ -105,6 +105,31 @@ object CodeGenerator {
   
   def encodeAst(ast: AST, env: RuntimeEnvironment, frame: Frame): StateTEither[CodeBlock] = 
     ast match {
+      
+      case SeqStmt(stmts) => 
+        for {
+          resList <- stmts.map( encodeAst(_, env, frame) ).sequenceU 
+        } yield ( sum(resList.map(_._1) :_*), merge(resList.map(_._2) :_*) )
+
+      case AssignStmt(ident, expr) => 
+        for {
+          (l1, c1) <- encodeAst(expr, env, frame)
+          (l2, c2) <- env.resolve(ident) match { 
+                        case Some(Variable(EntityAddress(addressLevel, displacement))) =>
+                          for {
+                            reg    <- displayRegister(frame.level, addressLevel)
+                            (l, c) <- emitAndIncr(Instruction.opSTORE, 1, reg , displacement)
+                          } yield (l, c)
+                        case _ => fail("Unresolved Variable in Assignment: " + ident)
+                      }
+          } yield ( sum(l1, l2), merge(c1, c2) )
+
+      case PrintStmt(expr) => 
+        for {
+          (l1, c1) <- encodeAst(expr, env, frame)
+          (l2, c2) <- encodeAst(CallStmt("!"), env, frame)
+          (l3, c3) <- encodeAst(CallStmt("$puteol"), env, frame)
+        } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
 
       case BinaryCondition(cond, left, right) => 
         for {
@@ -139,9 +164,9 @@ object CodeGenerator {
           case Some(Constant(value)) => emitAndIncr(Instruction.opLOADL, 0, 0, value)
           case Some(Variable(EntityAddress(addressLevel, displacement))) => 
             for {
-              reg      <- displayRegister(frame.level, addressLevel)
-              (l1, c1) <- emitAndIncr(Instruction.opLOAD, 1, reg, displacement)
-            } yield (l1, c1)
+              reg    <- displayRegister(frame.level, addressLevel)
+              (l, c) <- emitAndIncr(Instruction.opLOAD, 1, reg, displacement)
+            } yield (l, c)
           case _ => fail("Unresolved Variable " + name)
         }
 
