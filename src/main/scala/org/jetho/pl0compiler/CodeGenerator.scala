@@ -30,14 +30,17 @@ object CodeGenerator {
   def fail[A](msg: String) = 
     StateT[Result, Int, A](_ => msg.left[(Int, A)])
 
+
   /** generate a Diff List for an instruction with length 1.*/
   def emit(op: Int, n: Int, r: Int, d: Int): StateTEither[CodeBlock] = 
     stateT((1, DList(Instruction(op, r, n, d))))
+
 
   /** generate an instruction and increment the address counter.*/
   def emitAndIncr(op: Int, n: Int, r: Int, d: Int): StateTEither[CodeBlock] = 
     incrInstrCounter *> emit(op, n, r, d)
   
+
    /** register resolution for nested prodedure calls.*/
   def displayRegister(currentLevel: Int, objectLevel: Int): StateTEither[Int] =
     objectLevel match { 
@@ -46,24 +49,31 @@ object CodeGenerator {
       case _ => fail("Can't access data more than 6 levels out!")
     }
 
+
   /** generate an empty instruction.*/
   def skip: StateTEither[CodeBlock] = stateT((0, DList()))
 
+
   def sum(ints: Int*) = ints.sum 
+
 
   /** update the state (address counter) in the monad.*/
   def updateInstrCounter(i: Int) = 
     StateT[Result, Int, Unit](s => (i, ()).point[Result])
 
+
   def getInstrCounter =
     StateT[Result, Int, Int](s => (s, s).point[Result])
+
 
   def incrInstrCounter =
     StateT[Result, Int, Unit](s => (s+1, ()).point[Result])
 
+
   def checkLength(len: Int) = 
     (len > Instruction.PB) either ("Can't process more than " + Instruction.PB + " Instructions!") or len
   
+
   /* patch the unresolved forward references.*/
   def patchCode(code: List[Instruction]) = {
     def patch(i: Instruction) = i.success[String]
