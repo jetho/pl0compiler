@@ -19,7 +19,7 @@ object Semant {
 
   /** helper function for analyzing a list of AST nodes.*/
   def analyzeAsts(asts: List[AST], env: SemanticEnvironment) = 
-    asts.map(analyzeAst(_, env)).sequenceU //[({type l[a]=ValidationNEL[String, a]})#l, AST]    
+    asts.map(analyzeAst(_, env)).sequenceU 
 
 
   /** analyze the various language constructs.*/
@@ -78,8 +78,10 @@ object Semant {
     def isUnique(declGroup: (String, List[Declaration])) = 
       ((declGroup._2.length > 1) either ("Multiple Definition of " + declGroup._1) or declGroup._2.head).validation
    
-    val validatedDecls = decls.groupBy(_.ident).map(isUnique(_).toValidationNEL).toList
-    validatedDecls.sequenceU//[({type l[a]=ValidationNEL[String, a]})#l, Declaration]  
+    decls.groupBy(_.ident)
+         .map(isUnique(_).toValidationNEL)
+         .toList
+         .sequenceU
   }              
     
   
