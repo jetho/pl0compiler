@@ -1,4 +1,10 @@
 
+/** The Code Generator emits bytecode for the TAM Abstract machine.
+    A State Monad Transformer is used to avoid excessive backpatching.
+    The List of Instructions is built by merging small difference lists
+    containing single instructions.*/
+
+
 
 package org.jetho.pl0compiler
 
