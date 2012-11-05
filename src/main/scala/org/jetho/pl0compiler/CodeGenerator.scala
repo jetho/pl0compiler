@@ -107,8 +107,8 @@ object CodeGenerator {
           (l1, c1) <- encodeAst(expr, env, frame)
           (l2, c2) <- emitAndIncr(Instruction.opLOADL, 0, 0, 2)
           (l3, c3) <- encodeAst(CallStmt("$mod"), env, frame)
-	      (l4, c4) <- emitAndIncr(Instruction.opLOADL, 0, 0, 0)
-	      (l5, c5) <- emitAndIncr(Instruction.opLOADL, 0, 0, 1)
+          (l4, c4) <- emitAndIncr(Instruction.opLOADL, 0, 0, 0)
+          (l5, c5) <- emitAndIncr(Instruction.opLOADL, 0, 0, 1)
           (l6, c6) <- encodeAst(CallStmt("#"), env, frame)
         } yield ( sum(l1, l2, l3, l4, l5, l6), 
                   c1 ++ c2 ++ c3 ++ c4 ++ c5 ++ c6 )
@@ -118,13 +118,12 @@ object CodeGenerator {
           (l1, c1) <- encodeAst(left, env, frame)
           (l2, c2) <- encodeAst(right, env, frame)
           (l3, c3) <- encodeAst(CallStmt(op), env, frame)
-        } yield ( sum(l1, l2, l3), 
-                  c1 ++ c2 ++ c3 )
+        } yield ( sum(l1, l2, l3), c1 ++ c2 ++ c3 )
 
-	  case Ident(name) => 
+      case Ident(name) => 
         env.resolve(name) match {
           case Some(Constant(value)) => emitAndIncr(Instruction.opLOADL, 0, 0, value)
-	      case Some(Variable(EntityAddress(addressLevel, displacement))) => 
+          case Some(Variable(EntityAddress(addressLevel, displacement))) => 
             for {
               reg      <- displayRegister(frame.level, addressLevel)
               (l1, c1) <- emitAndIncr(Instruction.opLOAD, 1, reg, displacement)
