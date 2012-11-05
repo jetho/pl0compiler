@@ -1,5 +1,5 @@
 
-/** The Code Generator emits bytecode for the TAM Abstract machine.
+/** The Code Generator emits bytecode for the TAM Abstract Machine.
     A State Monad Transformer is used to avoid excessive backpatching.
     The List of Instructions is built by merging small difference lists
     containing single instructions.*/
@@ -79,7 +79,6 @@ object CodeGenerator {
   
   def checkLength(len: Int) = 
     (len > Instruction.PB) either ("Can't process more than " + Instruction.PB + " Instructions!") or len
-  
 
   /* patch the unresolved forward references.*/
   def patchCode(code: List[Instruction]) = {
