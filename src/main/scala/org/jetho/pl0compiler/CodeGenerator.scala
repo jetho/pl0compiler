@@ -17,6 +17,8 @@ import StateT._
 object CodeGenerator {
 
   type RuntimeEnvironment = Environment[RuntimeEntity]
+  type RE = RuntimeEnvironment
+
   type CodeBlock = (Int, DList[Instruction])
   type Result[+X] = \/[String, X]
   type StateTEither[+X] = StateT[Result, Int, X]
@@ -56,11 +58,11 @@ object CodeGenerator {
   /** helper functions for the bytecode generation.*/
  
   /** generate a Diff List for an instruction with length 1.*/
-  def emit(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RuntimeEnvironment]=None, f: Option[Frame]=None) = 
+  def emit(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RE]=None, f: Option[Frame]=None) = 
     stateT[Result, Int, CodeBlock]( (1, DList(Instruction(op, r, n, d, i, e, f))) )
 
   /** generate an instruction and increment the address counter.*/
-  def emitAndIncr(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RuntimeEnvironment]=None, f: Option[Frame]=None) = 
+  def emitAndIncr(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RE]=None, f: Option[Frame]=None) = 
     incrInstrCounter >> emit(op, n, r, d, i, e, f)  
 
   /** generate an empty instruction.*/
@@ -103,7 +105,7 @@ object CodeGenerator {
   }
 
   
-  def encode(ast: AST, env: RuntimeEnvironment, frame: Frame): StateTEither[CodeBlock] = 
+  def encode(ast: AST, env: RE, frame: Frame): StateTEither[CodeBlock] = 
     ast match {
       
       case SeqStmt(stmts) => 
@@ -115,7 +117,7 @@ object CodeGenerator {
         env.resolve(ident) match { 
 	      case Some(Proc(None)) =>
             for {
-              (l, cdummy) <- emitAndIncr(Instruction.opCALL_DUMMY, Instruction.rSB, Instruction.rCB, 0, ident.some, env.some, frame.some)
+              (l, cdummy) <- emitAndIncr(Instruction.opCALL_DUMMY, 0, 0, 0, ident.some, env.some, frame.some)
             } yield (l, cdummy)
           case Some(proc) => 
 	        encodeRoutineCall(ident, proc, frame)
