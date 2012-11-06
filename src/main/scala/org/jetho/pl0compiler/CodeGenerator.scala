@@ -91,11 +91,11 @@ object CodeGenerator {
             for {
               reg <- (displayRegister(frame.level, addressLevel) eval 0)
             } yield Instruction(Instruction.opCALL, n, reg, displacement)
-          case _ => ("Unresolved Procedure: " + id).left//[Instruction]
+          case _ => ("Unresolved Procedure: " + id).left
           }
       case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) => 
-        ("Incomplete Patching Information for Procedure: " + id).left//[Instruction]
-      case instr => instr.right//[String]
+        ("Incomplete Patching Information for Procedure: " + id).left
+      case instr => instr.right
     }    
     
     code.map(patch(_).validation.toValidationNEL)
