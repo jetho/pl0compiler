@@ -55,12 +55,12 @@ object CodeGenerator {
   /** helper functions for the bytecode generation.*/
  
   /** generate a Diff List for an instruction with length 1.*/
-  def emit(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RE]=None, f: Option[Frame]=None) = 
+  def instr(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RE]=None, f: Option[Frame]=None) = 
     stateT[Result, Int, CodeBlock]( DList(Instruction(op, r, n, d, i, e, f)) )
 
   /** generate an instruction and increment the address counter.*/
   def emitAndIncr(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RE]=None, f: Option[Frame]=None) = 
-    incrInstrCounter >> emit(op, n, r, d, i, e, f)  
+    incrInstrCounter >> instr(op, n, r, d, i, e, f)  
 
   /** generate an empty instruction.*/
   def skip: StateTEither[CodeBlock] = stateT(DList())
@@ -108,7 +108,7 @@ object CodeGenerator {
     val globalEnv = EmptyEnvironment[RuntimeEntity].extend(primitiveRoutines())
     for {
       code  <- encode(ast, globalEnv, globalFrame)
-      halt  <- emit(Instruction.opHALT, 0, 0, 0)
+      halt  <- instr(Instruction.opHALT, 0, 0, 0)
     } yield merge(code, halt)
   }
 
@@ -140,7 +140,7 @@ object CodeGenerator {
           c2    <- encode(block, env, Frame(frame.level + 1, 3))
           c3    <- emitAndIncr(Instruction.opRETURN, 0, 0, 0)
           addr  <- getInstrCounter
-          c1    <- emit(Instruction.opJUMP, 0, Instruction.rCB, addr)
+          c1    <- instr(Instruction.opJUMP, 0, Instruction.rCB, addr)
         } yield { env.update(ident, Proc(Some(EntityAddress(frame.level, a0))))
                   merge(c1, c2, c3) }
                 
@@ -179,7 +179,7 @@ object CodeGenerator {
           _     <- incrInstrCounter
           c3    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
           end   <- getInstrCounter
-          c2    <- emit(Instruction.opJUMPIF, 0, Instruction.rCB, end)
+          c2    <- instr(Instruction.opJUMPIF, 0, Instruction.rCB, end)
         } yield merge(c1, c2, c3)
 
 
@@ -188,7 +188,7 @@ object CodeGenerator {
           start <- incrInstrCounter 
           c2    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
           after <- getInstrCounter
-          c1    <- emit(Instruction.opJUMP, 0, Instruction.rCB, after)
+          c1    <- instr(Instruction.opJUMP, 0, Instruction.rCB, after)
           c3    <- encode(condition, env, frame)
           c4    <- emitAndIncr(Instruction.opJUMPIF, 1, Instruction.rCB, start)
         } yield merge(c1, c2, c3, c4)
