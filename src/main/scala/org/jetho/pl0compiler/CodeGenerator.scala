@@ -84,9 +84,21 @@ object CodeGenerator {
 
   /* patch the unresolved forward references.*/
   def patchCode(code: List[Instruction]) = {
-    def patch(i: Instruction) = i.success[String]
+    def patch(i: Instruction): \/[String, Instruction] = i match {
+      case Instruction(Instruction.opCALL_DUMMY, n, _, _, Some(id), Some(env), Some(frame)) =>
+        env.resolve(id) match {
+          case Some(Proc(Some(EntityAddress(addressLevel, displacement)))) => 
+            for {
+              reg <- (displayRegister(frame.level, addressLevel) eval 0)
+            } yield Instruction(Instruction.opCALL, n, reg, displacement)
+          case _ => ("Unresolved Procedure: " + id).left//[Instruction]
+          }
+      case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) => 
+        ("Incomplete Patching Information for Procedure: " + id).left//[Instruction]
+      case instr => instr.right//[String]
+    }    
     
-    code.map(patch(_).toValidationNEL)
+    code.map(patch(_).validation.toValidationNEL)
         .sequenceU
         .bimap(_.toList.mkString("\n"), identity)
         .disjunction
@@ -110,8 +122,8 @@ object CodeGenerator {
 
       case Block(constDecls, varDecls, procDecls, statement) => 
         val constBindings = constDecls.map { case ConstDecl(id, num) => (id, Constant(num)) }
-        val varBindings = varDecls.zipWithIndex.map { case (decl, i) => 
-          (decl.ident, Variable(EntityAddress(frame.level, frame.offset + i))) }
+        val varBindings = varDecls.zipWithIndex.map { case (decl, idx) => 
+          (decl.ident, Variable(EntityAddress(frame.level, frame.offset + idx))) }
         val procBindings = procDecls.map { procDecl => (procDecl.ident, Proc(None)) }
         val newLexicalEnvironment = env.extend( constBindings ::: varBindings ::: procBindings )
 
@@ -123,12 +135,16 @@ object CodeGenerator {
           (l3, c3) <- statement.map(encode(_, newLexicalEnvironment, frame) ).getOrElse(skip)
           (l4, c4) <- if (varBindings.length > 0) emitAndIncr(Instruction.opPOP, 0, 0, varBindings.length)
                       else skip
-        } yield ( sum(l1, l2, l3, l4), merge(c1, c2, c3, c4) )
-	
+        } yield ( sum(l1, l2, l3, l4), 
+                  merge(c1, c2, c3, c4) )
+
+
       case SeqStmt(stmts) => 
         for {
           resList <- stmts.map( encode(_, env, frame) ).sequenceU 
-        } yield ( sum(resList.map(_._1) :_*), merge(resList.map(_._2) :_*) )
+        } yield ( sum(resList.map(_._1) :_*), 
+                  merge(resList.map(_._2) :_*) )
+
 
       case CallStmt(ident) => 
         env.resolve(ident) match { 
@@ -140,6 +156,7 @@ object CodeGenerator {
 	        encodeRoutineCall(ident, proc, frame)
           case _ => fail("Unkown routine " + ident)
         }
+
 
       case AssignStmt(ident, expr) => 
         for {
@@ -154,12 +171,14 @@ object CodeGenerator {
           }          
         } yield ( sum(l1, l2), merge(c1, c2) )
 
+
       case PrintStmt(expr) => 
         for {
           (l1, c1) <- encode(expr, env, frame)
           (l2, c2) <- encode(CallStmt("!"), env, frame)
           (l3, c3) <- encode(CallStmt("$puteol"), env, frame)
         } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
+
 
       case BinaryCondition(cond, left, right) => 
         for {
@@ -170,6 +189,7 @@ object CodeGenerator {
           (l4, c4) <- encode(CallStmt(cond), env, frame)
         } yield ( sum(l1, l2, l3 ,l4), 
                   merge(c1, c2, c3, c4) )
+
 
       case OddCondition(expr) => 
         for {
@@ -182,12 +202,14 @@ object CodeGenerator {
         } yield ( sum(l1, l2, l3, l4, l5, l6), 
                   merge(c1, c2, c3, c4, c5, c6) )
 
+
       case BinOp(op, left, right) => 
         for {
           (l1, c1) <- encode(left, env, frame)
           (l2, c2) <- encode(right, env, frame)
           (l3, c3) <- encode(CallStmt(op), env, frame)
         } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
+
 
       case Ident(name) => 
         env.resolve(name) match {
@@ -200,7 +222,9 @@ object CodeGenerator {
           case _ => fail("Unresolved Variable " + name)
         }
 
+
       case IntLiteral(value) => emitAndIncr(Instruction.opLOADL, 0, 0, value)
+
 
       case _ => fail("Unknown AST-Node: " + ast)    
     }
