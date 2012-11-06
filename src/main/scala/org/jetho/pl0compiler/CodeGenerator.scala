@@ -107,7 +107,23 @@ object CodeGenerator {
   
   def encode(ast: AST, env: RE, frame: Frame): StateTEither[CodeBlock] = 
     ast match {
-      
+
+      case Block(constDecls, varDecls, procDecls, statement) => 
+        val constBindings = constDecls.map { case ConstDecl(id, num) => (id, Constant(num)) }
+        val varBindings = varDecls.zipWithIndex.map { case (decl, i) => (decl.ident, Variable(EntityAddress(frame.level, frame.offset + i))) }
+        val procBindings = procDecls.map { procDecl => (procDecl.ident, Proc(None)) }
+        val newLexicalEnvironment = env.extend( constBindings ::: varBindings ::: procBindings )
+
+        for {
+          (l1, c1) <- if (varBindings.length > 0) emitAndIncr(Instruction.opPUSH, 0, 0, varBindings.length)
+                      else skip
+          resList  <- procDecls.map( encode(_, newLexicalEnvironment, frame) ).sequenceU
+          val (l2, c2) = (sum(resList.map(_._1) :_*), merge(resList.map(_._2) :_*)) 
+          (l3, c3) <- statement.map(encode(_, newLexicalEnvironment, frame) ).getOrElse(skip)
+	      (l4, c4) <- if (varBindings.length > 0) emitAndIncr(Instruction.opPOP, 0, 0, varBindings.length)
+                      else skip
+        } yield ( sum(l1, l2, l3, l4), merge(c1, c2, c3, c4) )
+	
       case SeqStmt(stmts) => 
         for {
           resList <- stmts.map( encode(_, env, frame) ).sequenceU 
@@ -115,7 +131,7 @@ object CodeGenerator {
 
       case CallStmt(ident) => 
         env.resolve(ident) match { 
-	      case Some(Proc(None)) =>
+          case Some(Proc(None)) =>
             for {
               (l, cdummy) <- emitAndIncr(Instruction.opCALL_DUMMY, 0, 0, 0, ident.some, env.some, frame.some)
             } yield (l, cdummy)
