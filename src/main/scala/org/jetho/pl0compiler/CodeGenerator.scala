@@ -83,7 +83,7 @@ object CodeGenerator {
     case Instruction(Instruction.opCALL_DUMMY, n, _, _, Some(id), Some(env), Some(frame)) =>
       env.resolve(id) match {
         case Some(Proc(Some(EntityAddress(addressLevel, displacement)))) => 
-            displayRegister(frame.level, addressLevel) eval 0 >>= (Instruction(Instruction.opCALL, n, _, displacement).right)
+          displayRegister(frame.level, addressLevel) eval 0 >>= (Instruction(Instruction.opCALL, n, _, displacement).right)
         case _ => ("Unresolved Procedure: " + id).left
       }
     case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) =>
