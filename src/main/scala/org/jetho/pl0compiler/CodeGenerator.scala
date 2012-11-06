@@ -185,13 +185,12 @@ object CodeGenerator {
 
       case WhileStmt(condition, stmt) => 
         for {
-          _      <- incrInstrCounter
-          before <- getInstrCounter
-          c2     <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
-          after  <- getInstrCounter
-          c1     <- emit(Instruction.opJUMP, 0, Instruction.rCB, after)
-          c3     <- encode(condition, env, frame)
-          c4     <- emitAndIncr(Instruction.opJUMPIF, 1, Instruction.rCB, before)
+          start <- incrInstrCounter >> getInstrCounter
+          c2    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
+          after <- getInstrCounter
+          c1    <- emit(Instruction.opJUMP, 0, Instruction.rCB, after)
+          c3    <- encode(condition, env, frame)
+          c4    <- emitAndIncr(Instruction.opJUMPIF, 1, Instruction.rCB, start)
         } yield merge(c1, c2, c3, c4)
 
 
