@@ -110,7 +110,8 @@ object CodeGenerator {
 
       case Block(constDecls, varDecls, procDecls, statement) => 
         val constBindings = constDecls.map { case ConstDecl(id, num) => (id, Constant(num)) }
-        val varBindings = varDecls.zipWithIndex.map { case (decl, i) => (decl.ident, Variable(EntityAddress(frame.level, frame.offset + i))) }
+        val varBindings = varDecls.zipWithIndex.map { case (decl, i) => 
+          (decl.ident, Variable(EntityAddress(frame.level, frame.offset + i))) }
         val procBindings = procDecls.map { procDecl => (procDecl.ident, Proc(None)) }
         val newLexicalEnvironment = env.extend( constBindings ::: varBindings ::: procBindings )
 
@@ -120,7 +121,7 @@ object CodeGenerator {
           resList  <- procDecls.map( encode(_, newLexicalEnvironment, frame) ).sequenceU
           val (l2, c2) = (sum(resList.map(_._1) :_*), merge(resList.map(_._2) :_*)) 
           (l3, c3) <- statement.map(encode(_, newLexicalEnvironment, frame) ).getOrElse(skip)
-	      (l4, c4) <- if (varBindings.length > 0) emitAndIncr(Instruction.opPOP, 0, 0, varBindings.length)
+          (l4, c4) <- if (varBindings.length > 0) emitAndIncr(Instruction.opPOP, 0, 0, varBindings.length)
                       else skip
         } yield ( sum(l1, l2, l3, l4), merge(c1, c2, c3, c4) )
 	
