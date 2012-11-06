@@ -185,7 +185,7 @@ object CodeGenerator {
 
       case WhileStmt(condition, stmt) => 
         for {
-          start <- incrInstrCounter >> getInstrCounter
+          start <- incrInstrCounter 
           c2    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
           after <- getInstrCounter
           c1    <- emit(Instruction.opJUMP, 0, Instruction.rCB, after)
