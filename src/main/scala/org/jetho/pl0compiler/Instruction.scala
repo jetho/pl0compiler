@@ -5,7 +5,13 @@
 package org.jetho.pl0compiler
 
 
-case class Instruction(op: Int, var r: Int, n: Int, var d: Int)
+case class Instruction( op:    Int,                             
+                        var r: Int,                         
+                        var n: Int,                         
+                        var d: Int,
+                        ident: Option[String] = None,         
+                        env:   Option[CodeGenerator.RuntimeEnvironment] = None,
+                        frame: Option[Frame] = None )
 
 
 object Instruction { 
@@ -30,6 +36,10 @@ object Instruction {
 	   opJUMPI, 
 	   opJUMPIF, 
 	   opHALT) = 0.until(16).toList
+
+
+  /** a dummy Call-OP for patchable forward references.*/
+  final val opCALL_DUMMY = 99
 
 
   /** the set of registers.*/

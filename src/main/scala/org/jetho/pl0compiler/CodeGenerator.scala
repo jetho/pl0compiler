@@ -56,12 +56,12 @@ object CodeGenerator {
   /** helper functions for the bytecode generation.*/
  
   /** generate a Diff List for an instruction with length 1.*/
-  def emit(op: Int, n: Int, r: Int, d: Int): StateTEither[CodeBlock] = 
-    stateT((1, DList(Instruction(op, r, n, d))))
+  def emit(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RuntimeEnvironment]=None, f: Option[Frame]=None) = 
+    stateT[Result, Int, CodeBlock]( (1, DList(Instruction(op, r, n, d, i, e, f))) )
 
   /** generate an instruction and increment the address counter.*/
-  def emitAndIncr(op: Int, n: Int, r: Int, d: Int): StateTEither[CodeBlock] = 
-    incrInstrCounter >> emit(op, n, r, d)  
+  def emitAndIncr(op: Int, n: Int, r: Int, d: Int, i: Option[String]=None, e: Option[RuntimeEnvironment]=None, f: Option[Frame]=None) = 
+    incrInstrCounter >> emit(op, n, r, d, i, e, f)  
 
   /** generate an empty instruction.*/
   def skip: StateTEither[CodeBlock] = stateT((0, DList()))
@@ -113,12 +113,11 @@ object CodeGenerator {
 
       case CallStmt(ident) => 
         env.resolve(ident) match { 
-	      case Some(Proc(None)) => 
-          //  emitAndIncr(Instruction.opCALL_DUMMY, 
-	      //  val patchLocation = PatchLocation(nextInstrAddress, ident, env, currentFrame)
-	        emit(Instruction.opCALL, Instruction.rSB, Instruction.rCB, 0)
-	      //  Some(patchLocation) 
-	  	  case Some(proc) => 
+	      case Some(Proc(None)) =>
+            for {
+              (l, cdummy) <- emitAndIncr(Instruction.opCALL_DUMMY, Instruction.rSB, Instruction.rCB, 0, ident.some, env.some, frame.some)
+            } yield (l, cdummy)
+          case Some(proc) => 
 	        encodeRoutineCall(ident, proc, frame)
           case _ => fail("Unkown routine " + ident)
         }
@@ -127,14 +126,14 @@ object CodeGenerator {
         for {
           (l1, c1) <- encode(expr, env, frame)
           (l2, c2) <- env.resolve(ident) match { 
-                        case Some(Variable(EntityAddress(addressLevel, displacement))) =>
-                          for {
-                            reg    <- displayRegister(frame.level, addressLevel)
-                            (l, c) <- emitAndIncr(Instruction.opSTORE, 1, reg , displacement)
-                          } yield (l, c)
-                        case _ => fail("Unresolved Variable in Assignment: " + ident)
-                      }
-          } yield ( sum(l1, l2), merge(c1, c2) )
+            case Some(Variable(EntityAddress(addressLevel, displacement))) =>
+              for {
+                reg    <- displayRegister(frame.level, addressLevel)
+                (l, c) <- emitAndIncr(Instruction.opSTORE, 1, reg , displacement)
+              } yield (l, c)
+            case _ => fail("Unresolved Variable in Assignment: " + ident)   
+          }          
+        } yield ( sum(l1, l2), merge(c1, c2) )
 
       case PrintStmt(expr) => 
         for {
