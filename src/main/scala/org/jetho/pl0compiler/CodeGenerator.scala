@@ -27,7 +27,7 @@ object CodeGenerator {
   /** generate the code and patch the forward references.*/
   def encodeAst(ast: AST): \/[String, List[Instruction]] =      
     for { 
-      (len, code) <- encodeProgram(ast) eval 0
+      (len, code) <- encodeProgram(ast) eval Instruction.CB
       _ <- checkLength(len)
       patchedCode <- patchCode(code.toList).disjunction
     } yield patchedCode
@@ -52,7 +52,7 @@ object CodeGenerator {
     StateT[Result, Int, Int](s => (s, s).point[Result])
 
   def incrInstrCounter =
-    StateT[Result, Int, Unit](s => (s+1, ()).point[Result])
+    StateT[Result, Int, Int](s => (s+1, s+1).point[Result])
 
 
   /** helper functions for the bytecode generation.*/
@@ -92,7 +92,8 @@ object CodeGenerator {
           } yield Instruction(Instruction.opCALL, n, reg, displacement)
         case _ => ("Unresolved Procedure: " + id).left
       }
-    case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) => ("Incomplete Patching Information for Procedure: " + id).left
+    case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) =>
+      ("Incomplete Patching Information for Procedure: " + id).left
     case instr => instr.right
   }   
 
@@ -111,7 +112,7 @@ object CodeGenerator {
     for {
       (l1, code) <- encode(ast, globalEnv, globalFrame)
       (l2, halt) <- emit(Instruction.opHALT, 0, 0, 0)
-    } yield ( sum(l1, l2), merge(code, halt) )
+    } yield Pair(sum(l1, l2), merge(code, halt))
   }
 
   
@@ -133,15 +134,24 @@ object CodeGenerator {
           (l3, c3) <- statement.map(encode(_, newLexicalEnvironment, frame) ).getOrElse(skip)
           (l4, c4) <- if (varBindings.length > 0) emitAndIncr(Instruction.opPOP, 0, 0, varBindings.length)
                       else skip
-        } yield ( sum(l1, l2, l3, l4), 
-                  merge(c1, c2, c3, c4) )
+        } yield Pair(sum(l1, l2, l3, l4), merge(c1, c2, c3, c4))
+      
 
+      case ProcDecl(ident, block) => 
+        for {
+          a0       <- incrInstrCounter
+          (l2, c2) <- encode(block, env, Frame(frame.level + 1, 3))
+          (l3, c3) <- emitAndIncr(Instruction.opRETURN, 0, 0, 0)
+          addr     <- getInstrCounter
+          (l1, c1) <- emit(Instruction.opJUMP, 0, Instruction.rCB, addr + 1)
+        } yield { env.update(ident, Proc(Some(EntityAddress(frame.level, a0))))
+                  Pair(sum(l1, l2, l3), merge(c1, c2, c3)) }
+                
 
       case SeqStmt(stmts) => 
         for {
           resList <- stmts.map( encode(_, env, frame) ).sequenceU 
-        } yield ( sum(resList.map(_._1) :_*), 
-                  merge(resList.map(_._2) :_*) )
+        } yield Pair(sum(resList.map(_._1) :_*), merge(resList.map(_._2) :_*))
 
 
       case CallStmt(ident) => 
@@ -149,7 +159,7 @@ object CodeGenerator {
           case Some(Proc(None)) =>
             for {
               (l, cdummy) <- emitAndIncr(Instruction.opCALL_DUMMY, 0, 0, 0, ident.some, env.some, frame.some)
-            } yield (l, cdummy)
+            } yield Pair(l, cdummy)
           case Some(proc) => 
 	        encodeRoutineCall(ident, proc, frame)
           case _ => fail("Unkown routine " + ident)
@@ -164,10 +174,32 @@ object CodeGenerator {
               for {
                 reg    <- displayRegister(frame.level, addressLevel)
                 (l, c) <- emitAndIncr(Instruction.opSTORE, 1, reg , displacement)
-              } yield (l, c)
+              } yield Pair(l, c)
             case _ => fail("Unresolved Variable in Assignment: " + ident)   
           }          
-        } yield ( sum(l1, l2), merge(c1, c2) )
+        } yield Pair(sum(l1, l2), merge(c1, c2))
+
+
+      case IfStmt(condition, stmt) => 
+        for {
+          (l1, c1) <- encode(condition, env, frame)
+          _        <- incrInstrCounter
+          (l3, c3) <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
+          end      <- getInstrCounter
+          (l2, c2) <- emit(Instruction.opJUMPIF, 0, Instruction.rCB, end + 1)
+        } yield Pair(sum(l1, l2, l3), merge(c1, c2, c3))
+
+
+      case WhileStmt(condition, stmt) => 
+        for {
+          _        <- incrInstrCounter
+          before   <- getInstrCounter
+          (l2, c2) <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
+          after    <- getInstrCounter
+          (l1, c1) <- emit(Instruction.opJUMP, 0, Instruction.rCB, after)
+          (l3, c3) <- encode(condition, env, frame)
+          (l4, c4) <- emitAndIncr(Instruction.opJUMPIF, 1, Instruction.rCB, before)
+        } yield Pair(sum(l1, l2, l3, l4), merge(c1, c2, c3, c4))
 
 
       case PrintStmt(expr) => 
@@ -175,7 +207,7 @@ object CodeGenerator {
           (l1, c1) <- encode(expr, env, frame)
           (l2, c2) <- encode(CallStmt("!"), env, frame)
           (l3, c3) <- encode(CallStmt("$puteol"), env, frame)
-        } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
+        } yield Pair(sum(l1, l2, l3), merge(c1, c2, c3))
 
 
       case BinaryCondition(cond, left, right) => 
@@ -185,8 +217,7 @@ object CodeGenerator {
           (l3, c3) <- if (cond == "=" || cond == "#") emitAndIncr(Instruction.opLOADL, 0, 0, 1)
                       else skip
           (l4, c4) <- encode(CallStmt(cond), env, frame)
-        } yield ( sum(l1, l2, l3 ,l4), 
-                  merge(c1, c2, c3, c4) )
+        } yield Pair(sum(l1, l2, l3 ,l4), merge(c1, c2, c3, c4))
 
 
       case OddCondition(expr) => 
@@ -197,8 +228,8 @@ object CodeGenerator {
           (l4, c4) <- emitAndIncr(Instruction.opLOADL, 0, 0, 0)
           (l5, c5) <- emitAndIncr(Instruction.opLOADL, 0, 0, 1)
           (l6, c6) <- encode(CallStmt("#"), env, frame)
-        } yield ( sum(l1, l2, l3, l4, l5, l6), 
-                  merge(c1, c2, c3, c4, c5, c6) )
+        } yield Pair(sum(l1, l2, l3, l4, l5, l6), 
+                     merge(c1, c2, c3, c4, c5, c6))
 
 
       case BinOp(op, left, right) => 
@@ -206,7 +237,7 @@ object CodeGenerator {
           (l1, c1) <- encode(left, env, frame)
           (l2, c2) <- encode(right, env, frame)
           (l3, c3) <- encode(CallStmt(op), env, frame)
-        } yield ( sum(l1, l2, l3), merge(c1, c2, c3) )
+        } yield Pair(sum(l1, l2, l3), merge(c1, c2, c3))
 
 
       case Ident(name) => 
@@ -216,7 +247,7 @@ object CodeGenerator {
             for {
               reg    <- displayRegister(frame.level, addressLevel)
               (l, c) <- emitAndIncr(Instruction.opLOAD, 1, reg, displacement)
-            } yield (l, c)
+            } yield Pair(l, c)
           case _ => fail("Unresolved Variable " + name)
         }
 
@@ -235,7 +266,7 @@ object CodeGenerator {
         for {
            reg    <- displayRegister(frame.level, addressLevel)
            (l, c) <- emitAndIncr(Instruction.opCALL, reg, Instruction.rCB, displacement)
-        } yield (l, c) 
+        } yield Pair(l, c) 
       case PrimitiveRoutine(displacement) => 
         emitAndIncr(Instruction.opCALL, Instruction.rSB, Instruction.rPB, displacement) 
       case _ => fail("Unknown Routine " + ident)
