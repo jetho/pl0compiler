@@ -17,7 +17,7 @@ object PL0Compiler {
   """
 
 
-  //def printErrors = (errors: List[String]) => errors.foreach(println)
+  def printErrors = println(_: String)
 
 
   def readFile(file: String): \/[String, String] = 
@@ -32,15 +32,14 @@ object PL0Compiler {
     try {
       val objectStream = new DataOutputStream (objectFile)
       code.foreach { 
-        case Instruction(op, r, n, d) => { 
-          objectStream.writeInt(op)
-          objectStream.writeInt(r)
-          objectStream.writeInt(n)
-          objectStream.writeInt(d)
+        instruction =>
+          objectStream.writeInt(instruction.op)
+          objectStream.writeInt(instruction.r)
+          objectStream.writeInt(instruction.n)
+          objectStream.writeInt(instruction.d)
         }
-      }      
-    } finally { objectFile.close }
-  }
+      } finally { objectFile.close }
+    }
 
 
   /** execute the front end parts.*/
@@ -54,19 +53,23 @@ object PL0Compiler {
 
   /** analyze and interpret the program.*/
   def interpret(file: String) =
-    parseAndAnalyze(file).fold(println, TreeInterpreter.eval(_))
+    parseAndAnalyze(file).fold(printErrors, TreeInterpreter.eval(_))
  
 
-//  def compile(file: String, outfile: String) = {
-//    val result = parseAndAnalyze(file)
-//    result.fold(printErrors)
-//  }
+  def compile(file: String, outfile: String) = {
+    val result = for {
+      ast   <- parseAndAnalyze(file)
+      code  <- CodeGenerator.encodeAst(ast)
+    } yield code
+    
+    result.fold(printErrors, writeOutputFile(outfile, _))
+  }
 
   
   def main(args: Array[String]) {    
     args.toList match {
       case "-i" :: srcfile :: Nil => interpret(srcfile)
-    //  case srcfile :: destfile :: Nil => compile(srcfile, destfile)
+      case srcfile :: destfile :: Nil => compile(srcfile, destfile)
       case _ => println(usage)
                 sys.exit(1)
     }
