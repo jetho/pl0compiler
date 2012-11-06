@@ -13,6 +13,3 @@ case class PrimitiveRoutine(displacement: Int) extends RuntimeEntity
 
 case class EntityAddress(level: Int, displacement: Int)
 
-case class PatchLocation(displacement: Int, ident: String, env: Environment[RuntimeEntity], frame: Frame)
-
-
