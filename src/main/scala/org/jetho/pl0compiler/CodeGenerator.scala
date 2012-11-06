@@ -98,9 +98,9 @@ object CodeGenerator {
 
   /* patch all unresolved forward references.*/
   def patchCode(code: List[Instruction]) = 
-    code.map(patch(_).validation.toValidationNEL)           // generate validations for all instructions
+    code.map(patch(_).validation.toValidationNEL)           // validate/patch all instructions
         .sequenceU                                          // sequence the validations
-        .bimap(_.toList.mkString("\n"), identity)           // merge all errors or return the patched code
+        .bimap(_.toList.mkString("\n"), identity)           // merge errors or return the patched code
        
 
   /* the encoding functions for the various AST nodes.*/
