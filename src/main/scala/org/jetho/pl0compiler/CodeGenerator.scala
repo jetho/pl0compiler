@@ -244,7 +244,6 @@ object CodeGenerator {
 
       case IntLiteral(value) => emit(Instruction.opLOADL, 0, 0, value)
 
-
       case _ => fail("Unknown AST-Node: " + ast)    
     }
 
