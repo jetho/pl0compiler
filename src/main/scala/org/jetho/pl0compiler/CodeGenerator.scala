@@ -43,7 +43,7 @@ object CodeGenerator {
   def merge(dlists: DList[Instruction]*) = dlists.fold(DList[Instruction]())( _ ++ _)
 
   
-  /** functions for modifying the state.*/
+  /** functions for handling the state in the state monad.*/
 
   def getInstrCounter =
     StateT[Result, Int, Int](s => (s, s).point[Result])
@@ -153,10 +153,8 @@ object CodeGenerator {
 
       case CallStmt(ident) => 
         env.resolve(ident) match { 
-          case Some(Proc(None)) =>
-            emitAndIncr(Instruction.opCALL_DUMMY, 0, 0, 0, ident.some, env.some, frame.some)
-          case Some(proc) => 
-	        encodeRoutineCall(ident, proc, frame)
+          case Some(Proc(None)) => emitAndIncr(Instruction.opCALL_DUMMY, 0, 0, 0, ident.some, env.some, frame.some)
+          case Some(proc) => encodeRoutineCall(ident, proc, frame)
           case _ => fail("Unkown routine " + ident)
         }
 

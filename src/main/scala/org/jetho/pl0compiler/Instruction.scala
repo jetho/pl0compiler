@@ -6,9 +6,9 @@ package org.jetho.pl0compiler
 
 
 case class Instruction( op:    Int,                             
-                        var r: Int,                         
-                        var n: Int,                         
-                        var d: Int,
+                        r:     Int,                         
+                        n:     Int,                         
+                        d:     Int,
                         ident: Option[String] = None,         
                         env:   Option[CodeGenerator.RuntimeEnvironment] = None,
                         frame: Option[Frame] = None )
