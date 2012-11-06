@@ -29,7 +29,7 @@ object CodeGenerator {
     for { 
       (len, code) <- encodeProgram(ast) eval 0
       _ <- checkLength(len)
-      patchedCode <- patchCode(code.toList)
+      patchedCode <- patchCode(code.toList).disjunction
     } yield patchedCode
   
   
@@ -82,28 +82,26 @@ object CodeGenerator {
   def checkLength(len: Int) = 
     (len > Instruction.PB) either ("Can't process more than " + Instruction.PB + " Instructions!") or len
 
-  /* patch the unresolved forward references.*/
-  def patchCode(code: List[Instruction]) = {
-    def patch(i: Instruction): \/[String, Instruction] = i match {
-      case Instruction(Instruction.opCALL_DUMMY, n, _, _, Some(id), Some(env), Some(frame)) =>
-        env.resolve(id) match {
-          case Some(Proc(Some(EntityAddress(addressLevel, displacement)))) => 
-            for {
-              reg <- (displayRegister(frame.level, addressLevel) eval 0)
-            } yield Instruction(Instruction.opCALL, n, reg, displacement)
-          case _ => ("Unresolved Procedure: " + id).left
-          }
-      case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) => 
-        ("Incomplete Patching Information for Procedure: " + id).left
-      case instr => instr.right
-    }    
-    
-    code.map(patch(_).validation.toValidationNEL)
-        .sequenceU
-        .bimap(_.toList.mkString("\n"), identity)
-        .disjunction
-  }
-  
+  /** patch a dummy procedure call consulting the constructed runtime environment.*/
+  def patch(i: Instruction): \/[String, Instruction] = i match {
+    case Instruction(Instruction.opCALL_DUMMY, n, _, _, Some(id), Some(env), Some(frame)) =>
+      env.resolve(id) match {
+        case Some(Proc(Some(EntityAddress(addressLevel, displacement)))) => 
+          for {
+            reg <- (displayRegister(frame.level, addressLevel) eval 0)
+          } yield Instruction(Instruction.opCALL, n, reg, displacement)
+        case _ => ("Unresolved Procedure: " + id).left
+      }
+    case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) => ("Incomplete Patching Information for Procedure: " + id).left
+    case instr => instr.right
+  }   
+
+  /* patch all unresolved forward references.*/
+  def patchCode(code: List[Instruction]) = 
+    code.map(patch(_).validation.toValidationNEL)           // generate validations for all instructions
+        .sequenceU                                          // sequence the validations
+        .bimap(_.toList.mkString("\n"), identity)           // merge all errors or return the patched code
+       
 
   /* the encoding functions for the various AST nodes.*/
   
