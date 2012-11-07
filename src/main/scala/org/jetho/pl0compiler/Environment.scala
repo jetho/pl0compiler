@@ -29,6 +29,10 @@ class Environment[T](ids: Map[String, T], parent: Option[Environment[T]]) {
       parent.map(_.update(id, value))  
   }
 
+  /** lookup the identifier and apply the given constraint.*/
+  def lookup[A](ident: String) (constraint: PartialFunction[T, A]) =
+    resolve(ident) flatMap constraint.lift
+
 }
 
 

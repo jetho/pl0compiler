@@ -84,28 +84,23 @@ object Semant {
          .sequenceU
   }              
     
-  
-  /** lookup the identifier and apply the given constraint.*/
-  def checkIdentifier(ident: String, env: SemanticEnvironment) (constraint: PartialFunction[AST, Validation[String, AST]]) =
-    env.resolve(ident) flatMap constraint.lift
-
 
   def checkForValue(ident: String, env: SemanticEnvironment) =
-    checkIdentifier(ident, env) {
+    env.lookup(ident) {
       case v: VarDecl => v.success
       case c: ConstDecl => c.success
     }.getOrElse(("Not a valid Variable or Constant: " + ident + "!").failure)
 
 
   def checkForVariable(ident: String, env: SemanticEnvironment) = 
-    checkIdentifier(ident, env) {
+    env.lookup(ident) {
       case v: VarDecl => v.success
       case c: ConstDecl => ("Illegal Assignment to Constant " + ident + "!").failure
     }.getOrElse(("Undefined Variable: " + ident + "!").failure)
 
 
   def checkForProcedure(ident: String, env: SemanticEnvironment) =
-    checkIdentifier(ident, env) {
+    env.lookup(ident) {
       case p: ProcDecl => p.success     
     }.getOrElse(("Undefined Procedure " + ident + "!").failure)
 
