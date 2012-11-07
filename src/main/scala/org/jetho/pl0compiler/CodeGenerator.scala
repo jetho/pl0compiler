@@ -86,8 +86,7 @@ object CodeGenerator {
           displayRegister(frame.level, addressLevel) eval 0 >>= (Instruction(Instruction.opCALL, n, _, displacement).right)
         case _ => ("Unresolved Procedure: " + id).left
       }
-    case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) =>
-      ("Incomplete Patching Information for Procedure: " + id).left
+    case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) => ("Incomplete Patching Info for: " + id).left
     case instr => instr.right
   }   
 
