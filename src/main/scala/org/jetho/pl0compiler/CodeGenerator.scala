@@ -83,9 +83,7 @@ object CodeGenerator {
     case Instruction(Instruction.opCALL_DUMMY, n, _, _, Some(id), Some(env), Some(frame)) =>
       env.resolve(id) match {
         case Some(Proc(Some(EntityAddress(addressLevel, displacement)))) => 
-          for {
-            reg <- (displayRegister(frame.level, addressLevel) eval 0)
-          } yield Instruction(Instruction.opCALL, n, reg, displacement)
+            displayRegister(frame.level, addressLevel) eval 0 >>= (Instruction(Instruction.opCALL, n, _, displacement).right)
         case _ => ("Unresolved Procedure: " + id).left
       }
     case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) =>
@@ -145,9 +143,7 @@ object CodeGenerator {
                 
 
       case SeqStmt(stmts) => 
-        for {
-          clist <- stmts.map( encode(_, env, frame) ).sequenceU 
-        } yield merge(clist :_*)
+        stmts.map(encode(_, env, frame)).sequenceU >>= (clist => merge(clist :_*).point[StateTEither])
 
 
       case CallStmt(ident) => 
@@ -163,10 +159,7 @@ object CodeGenerator {
           c1    <- encode(expr, env, frame)
           c2    <- env.resolve(ident) match { 
             case Some(Variable(EntityAddress(addressLevel, displacement))) =>
-              for {
-                reg <- displayRegister(frame.level, addressLevel)
-                c   <- emit(Instruction.opSTORE, 1, reg , displacement)
-              } yield c
+              displayRegister(frame.level, addressLevel) >>= (emit(Instruction.opSTORE, 1, _ , displacement))
             case _ => fail("Unresolved Variable in Assignment: " + ident)   
           }          
         } yield merge(c1, c2)
@@ -234,10 +227,7 @@ object CodeGenerator {
         env.resolve(name) match {
           case Some(Constant(value)) => emit(Instruction.opLOADL, 0, 0, value)
           case Some(Variable(EntityAddress(addressLevel, displacement))) => 
-            for {
-              reg  <- displayRegister(frame.level, addressLevel)
-              c    <- emit(Instruction.opLOAD, 1, reg, displacement)
-            } yield c
+            displayRegister(frame.level, addressLevel) >>= (emit(Instruction.opLOAD, 1, _, displacement))
           case _ => fail("Unresolved Variable " + name)
         }
 
@@ -252,10 +242,7 @@ object CodeGenerator {
   def encodeRoutineCall(ident: String, proc: RuntimeEntity, frame: Frame): StateTEither[CodeBlock] = 
     proc match {    
       case Proc(Some(EntityAddress(addressLevel, displacement))) =>  
-        for {
-           reg  <- displayRegister(frame.level, addressLevel)
-           c    <- emit(Instruction.opCALL, reg, Instruction.rCB, displacement)
-        } yield c 
+        displayRegister(frame.level, addressLevel) >>= (emit(Instruction.opCALL, _, Instruction.rCB, displacement))
       case PrimitiveRoutine(displacement) => emit(Instruction.opCALL, Instruction.rSB, Instruction.rPB, displacement) 
       case _ => fail("Unknown Routine " + ident)
     }
