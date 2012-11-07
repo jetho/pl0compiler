@@ -123,9 +123,8 @@ object CodeGenerator {
         for {
           c1    <- if (varBindings.length > 0) emit(Instruction.opPUSH, 0, 0, varBindings.length)
                    else skip
-          clist <- procDecls.map( encode(_, newLexicalEnvironment, frame) ).sequenceU
-          val c2 = merge(clist :_*) 
-          c3    <- statement.map(encode(_, newLexicalEnvironment, frame) ).getOrElse(skip)
+          c2    <- procDecls.map(encode(_, newLexicalEnvironment, frame)).sequenceU.map(merge)
+          c3    <- statement.map(encode(_, newLexicalEnvironment, frame)).getOrElse(skip)
           c4    <- if (varBindings.length > 0) emit(Instruction.opPOP, 0, 0, varBindings.length)
                    else skip
         } yield merge(c1, c2, c3, c4)
@@ -143,7 +142,7 @@ object CodeGenerator {
                 
 
       case SeqStmt(stmts) => 
-        stmts.map(encode(_, env, frame)).sequenceU >>= (clist => merge(clist :_*).point[StateTEither])
+        stmts.map(encode(_, env, frame)).sequenceU.map(merge)//>>= (clist => merge(clist :_*).point[StateTEither])
 
 
       case CallStmt(ident) => 
@@ -230,7 +229,6 @@ object CodeGenerator {
             displayRegister(frame.level, addressLevel) >>= (emit(Instruction.opLOAD, 1, _, displacement))
           case _ => fail("Unresolved Variable " + name)
         }
-
 
       case IntLiteral(value) => emit(Instruction.opLOADL, 0, 0, value)
 
