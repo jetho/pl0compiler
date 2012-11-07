@@ -120,6 +120,8 @@ object CodeGenerator {
   def encode(ast: AST, env: RE, frame: Frame): StateTEither[CodeBlock] = 
     ast match {
 
+      /** the subnodes of a block are compiled in a new lexical environment;
+          placeholders are emited for the still unknown procedure addresses.*/
       case Block(constDecls, varDecls, procDecls, statement) => 
         val constBindings = constDecls.map { case ConstDecl(id, num) => (id, Constant(num)) }
         val varBindings = varDecls.zipWithIndex.map { case (decl, idx) => 
@@ -137,6 +139,7 @@ object CodeGenerator {
         } yield merge(c1, c2, c3, c4)
       
 
+      /** compile a procedure and update the environment with its address.*/
       case ProcDecl(ident, block) => 
         for {
           a0    <- incrInstrCounter
@@ -152,13 +155,14 @@ object CodeGenerator {
         stmts.map(encode(_, env, frame)).sequenceU.map(merge)
 
 
+      /** if the address of the routine is known then emit a Call instruction;
+          else emit a DUMMY Call instruction for patching in the second pass.*/
       case CallStmt(ident) => 
         lookup(env, ident) {
           case Proc(None) => emit(Instruction.opCALL_DUMMY, 0, 0, 0, ident.some, env.some, frame.some)
           case proc => encodeRoutineCall(ident, proc, frame)
         }.getOrElse(fail("Unkown routine " + ident))
         
-
 
       case AssignStmt(ident, expr) => 
         for {
