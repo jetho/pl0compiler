@@ -117,7 +117,7 @@ object CodeGenerator {
     ast match {
 
       /** the subnodes of a block are compiled in a new lexical environment;
-          placeholders are emited for the still unknown procedure addresses.*/
+          placeholders are emitted for the still unknown procedure addresses.*/
       case Block(constDecls, varDecls, procDecls, statement) => 
         val constBindings = constDecls.map { case ConstDecl(id, num) => (id, Constant(num)) }
         val varBindings = varDecls.zipWithIndex.map { case (decl, idx) => 
