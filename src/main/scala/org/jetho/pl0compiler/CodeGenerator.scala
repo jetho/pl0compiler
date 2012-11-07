@@ -25,7 +25,7 @@ object CodeGenerator {
 
 
   /** generate the code and patch the forward references.*/
-  def encodeAst(ast: AST): \/[String, List[Instruction]] =      
+  def encodeAst(ast: AST): Result[List[Instruction]] =      
     for { 
       codeDList   <- encodeProgram(ast) eval Instruction.CB
       code        <- validateLength(codeDList.toList)
@@ -50,6 +50,10 @@ object CodeGenerator {
   def incrInstrCounter =
     StateT[Result, Int, Int](s => (s+1, s+1).point[Result])
 
+  /** lift result into the state monad transformer.*/
+  def lift[A](v: Result[A]) = StateT[Result, Int, A](s => v.map((s, _)))     
+  
+
 
   /** helper functions for the bytecode generation.*/
  
@@ -65,11 +69,11 @@ object CodeGenerator {
   def skip: StateTEither[CodeBlock] = stateT(DList())
 
   /** register resolution for nested prodedure calls.*/
-  def displayRegister(currentLevel: Int, objectLevel: Int): StateTEither[Int] =
+  def displayRegister(currentLevel: Int, objectLevel: Int): Result[Int] =
     objectLevel match { 
-      case 0 => stateT(Instruction.rSB)
-      case _ if (currentLevel - objectLevel <= 6) => stateT(Instruction.rLB + currentLevel - objectLevel)
-      case _ => fail("Can't access data more than 6 levels out!")
+      case 0 => Instruction.rSB.right
+      case _ if (currentLevel - objectLevel <= 6) => (Instruction.rLB + currentLevel - objectLevel).right
+      case _ => "Can't access data more than 6 levels out!".left
     }
 
  
@@ -79,11 +83,11 @@ object CodeGenerator {
     (code.length > Instruction.PB) either ("Can't process more than " + Instruction.PB + " Instructions!") or code
 
   /** patch a dummy procedure call consulting the constructed runtime environment.*/
-  def patch(i: Instruction): \/[String, Instruction] = i match {
+  def patch(i: Instruction): Result[Instruction] = i match {
     case Instruction(Instruction.opCALL_DUMMY, n, _, _, Some(id), Some(env), Some(frame)) =>
       env.resolve(id) match {
         case Some(Proc(Some(EntityAddress(addressLevel, displacement)))) => 
-          displayRegister(frame.level, addressLevel) eval 0 >>= (Instruction(Instruction.opCALL, n, _, displacement).right)
+          displayRegister(frame.level, addressLevel) map (Instruction(Instruction.opCALL, n, _, displacement))
         case _ => ("Unresolved Procedure: " + id).left
       }
     case Instruction(Instruction.opCALL_DUMMY, n, _, _, _, _, _) => ("Incomplete Patching Info for: " + id).left
@@ -157,7 +161,7 @@ object CodeGenerator {
           c1    <- encode(expr, env, frame)
           c2    <- env.resolve(ident) match { 
             case Some(Variable(EntityAddress(addressLevel, displacement))) =>
-              displayRegister(frame.level, addressLevel) >>= (emit(Instruction.opSTORE, 1, _ , displacement))
+              lift(displayRegister(frame.level, addressLevel)) >>= (emit(Instruction.opSTORE, 1, _ , displacement))
             case _ => fail("Unresolved Variable in Assignment: " + ident)   
           }          
         } yield merge(c1, c2)
@@ -225,7 +229,7 @@ object CodeGenerator {
         env.resolve(name) match {
           case Some(Constant(value)) => emit(Instruction.opLOADL, 0, 0, value)
           case Some(Variable(EntityAddress(addressLevel, displacement))) => 
-            displayRegister(frame.level, addressLevel) >>= (emit(Instruction.opLOAD, 1, _, displacement))
+            lift(displayRegister(frame.level, addressLevel)) >>= (emit(Instruction.opLOAD, 1, _, displacement))
           case _ => fail("Unresolved Variable " + name)
         }
 
@@ -239,7 +243,7 @@ object CodeGenerator {
   def encodeRoutineCall(ident: String, proc: RuntimeEntity, frame: Frame): StateTEither[CodeBlock] = 
     proc match {    
       case Proc(Some(EntityAddress(addressLevel, displacement))) =>  
-        displayRegister(frame.level, addressLevel) >>= (emit(Instruction.opCALL, _, Instruction.rCB, displacement))
+        lift(displayRegister(frame.level, addressLevel)) >>= (emit(Instruction.opCALL, _, Instruction.rCB, displacement))
       case PrimitiveRoutine(displacement) => emit(Instruction.opCALL, Instruction.rSB, Instruction.rPB, displacement) 
       case _ => fail("Unknown Routine " + ident)
     }
