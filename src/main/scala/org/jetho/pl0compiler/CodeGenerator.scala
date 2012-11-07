@@ -142,7 +142,7 @@ object CodeGenerator {
                 
 
       case SeqStmt(stmts) => 
-        stmts.map(encode(_, env, frame)).sequenceU.map(merge)//>>= (clist => merge(clist :_*).point[StateTEither])
+        stmts.map(encode(_, env, frame)).sequenceU.map(merge)
 
 
       case CallStmt(ident) => 
