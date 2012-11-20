@@ -142,7 +142,7 @@ object CodeGenerator {
           c2    <- encode(block, env, Frame(frame.level + 1, 3))
           c3    <- emit(Instruction.opRETURN, 0, 0, 0)
           addr  <- getInstrCounter
-          c1    <- instr(Instruction.opJUMP, 0, Instruction.rCB, addr).point[StateTEither]
+          c1    =  instr(Instruction.opJUMP, 0, Instruction.rCB, addr)
         } yield { env.update(ident, Proc(Some(EntityAddress(frame.level, a0))))
                   merge(c1, c2, c3) }
                 
@@ -176,7 +176,7 @@ object CodeGenerator {
           _     <- incrInstrCounter
           c3    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
           end   <- getInstrCounter
-          c2    <- instr(Instruction.opJUMPIF, 0, Instruction.rCB, end).point[StateTEither]
+          c2    = instr(Instruction.opJUMPIF, 0, Instruction.rCB, end)
         } yield merge(c1, c2, c3)
 
 
@@ -185,7 +185,7 @@ object CodeGenerator {
           start <- incrInstrCounter 
           c2    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
           after <- getInstrCounter
-          c1    <- instr(Instruction.opJUMP, 0, Instruction.rCB, after).point[StateTEither]
+          c1    =  instr(Instruction.opJUMP, 0, Instruction.rCB, after)
           c3    <- encode(condition, env, frame)
           c4    <- emit(Instruction.opJUMPIF, 1, Instruction.rCB, start)
         } yield merge(c1, c2, c3, c4)

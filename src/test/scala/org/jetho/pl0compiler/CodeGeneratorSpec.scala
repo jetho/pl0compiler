@@ -21,6 +21,49 @@ class CodeGeneratorSpec extends FlatSpec with ShouldMatchers {
     parseAnalyzeEncode(s) should equal ("Can't process more than 1024 Instructions!".left)
   }
 
+  it should "reject procedure nesting levels greater than 6" in {
+    val s = """
+      PROCEDURE proc1;
+      VAR x;  
+      PROCEDURE proc2;
+        VAR y;    
+        PROCEDURE proc3;
+            PROCEDURE proc4;
+                PROCEDURE proc5;
+                    PROCEDURE proc6;
+                        PROCEDURE proc7;
+                            PROCEDURE proc8;
+                              BEGIN
+                                x := 5;
+                                y := 6;
+                              END;
+                          BEGIN						
+                          END;
+                      BEGIN					
+                      END;
+                  BEGIN				
+                  END;
+              BEGIN			
+              END;
+          BEGIN       
+          END;
+            
+        BEGIN
+          CALL proc3;
+          !y
+        END;    
+
+      BEGIN
+        CALL proc2;
+        !x
+      END;
+     
+    CALL proc1
+    .
+    """
+    parseAnalyzeEncode(s) should equal ("Can't access data more than 6 levels out!".left)
+  }      
+
   it should "encode valid programs" in {
     
     val s1 = """
