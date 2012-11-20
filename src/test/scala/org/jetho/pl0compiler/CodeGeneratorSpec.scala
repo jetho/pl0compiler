@@ -17,7 +17,7 @@ class CodeGeneratorSpec extends FlatSpec with ShouldMatchers {
 
   "The Semantic Analyzer" should "reject more than 1024 instructions" in {
     // a print statement generates 2 instructions
-    val s = "BEGIN" + Vector.fill(512)("!1;").mkString + " !1 END ."   
+    val s = "BEGIN" + List.fill(512)("!1;").mkString + " !1 END ."   
     parseAnalyzeEncode(s) should equal ("Can't process more than 1024 Instructions!".left)
   }
 
