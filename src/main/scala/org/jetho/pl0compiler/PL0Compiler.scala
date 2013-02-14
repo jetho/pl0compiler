@@ -22,7 +22,7 @@ object PL0Compiler {
 
 
   def readFile(file: String): \/[String, String] = 
-    fromTryCatch(fromFile(file)) bimap (_.toString, _.mkString)
+    fromTryCatch(fromFile(file)) bimap (_.getMessage.toString, _.mkString)
 
 
   /** generate object file.*/
