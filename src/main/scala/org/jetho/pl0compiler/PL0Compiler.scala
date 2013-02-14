@@ -8,6 +8,7 @@ import scala.io.Source._
 import java.io.{ FileOutputStream, DataOutputStream }
 import scalaz._
 import Scalaz._
+import scalaz.\/.fromTryCatch
 
 
 object PL0Compiler {
@@ -21,9 +22,7 @@ object PL0Compiler {
 
 
   def readFile(file: String): \/[String, String] = 
-    try {
-      fromFile(file).mkString.right
-    } catch { case e: Exception => e.toString.left }
+    fromTryCatch(fromFile(file)) bimap (_.toString, _.mkString)
 
 
   /** generate object file.*/
