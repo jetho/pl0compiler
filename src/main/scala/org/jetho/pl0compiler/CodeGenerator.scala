@@ -107,13 +107,13 @@ object CodeGenerator {
     val globalFrame = Frame(0, 0)
     val globalEnv = EmptyEnvironment[RuntimeEntity].extend(primitiveRoutines())
     for {
-      code  <- encode(ast, globalEnv, globalFrame)
+      code  <- encode(globalEnv, globalFrame)(ast)
       halt  <- emit(Instruction.opHALT, 0, 0, 0)
     } yield merge(code, halt)
   }
 
   
-  def encode(ast: AST, env: RE, frame: Frame): StateTEither[CodeBlock] = 
+  def encode(env: RE, frame: Frame)(ast: AST): StateTEither[CodeBlock] = 
     ast match {
 
       /** the subnodes of a block are compiled in a new lexical environment;
@@ -128,8 +128,8 @@ object CodeGenerator {
         for {
           c1    <- if (varBindings.length > 0) emit(Instruction.opPUSH, 0, 0, varBindings.length)
                    else skip
-          c2    <- procDecls.map(encode(_, newLexicalEnvironment, frame)).sequenceU.map(merge)
-          c3    <- statement.map(encode(_, newLexicalEnvironment, frame)).getOrElse(skip)
+          c2    <- procDecls.map(encode(newLexicalEnvironment, frame)).sequenceU.map(merge)
+          c3    <- statement.map(encode(newLexicalEnvironment, frame)).getOrElse(skip)
           c4    <- if (varBindings.length > 0) emit(Instruction.opPOP, 0, 0, varBindings.length)
                    else skip
         } yield merge(c1, c2, c3, c4)
@@ -139,7 +139,7 @@ object CodeGenerator {
       case ProcDecl(ident, block) => 
         for {
           a0    <- incrInstrCounter
-          c2    <- encode(block, env, Frame(frame.level + 1, 3))
+          c2    <- encode(env, Frame(frame.level + 1, 3))(block)
           c3    <- emit(Instruction.opRETURN, 0, 0, 0)
           addr  <- getInstrCounter
           c1    =  instr(Instruction.opJUMP, 0, Instruction.rCB, addr)
@@ -148,7 +148,7 @@ object CodeGenerator {
                 
 
       case SeqStmt(stmts) => 
-        stmts.map(encode(_, env, frame)).sequenceU.map(merge)
+        stmts.map(encode(env, frame)).sequenceU.map(merge)
 
 
       /** if the address of the routine is known then emit a Call instruction;
@@ -162,7 +162,7 @@ object CodeGenerator {
 
       case AssignStmt(ident, expr) => 
         for {
-          c1    <- encode(expr, env, frame)
+          c1    <- encode(env, frame)(expr)
           c2    <- env.lookup(ident) { 
             case Variable(EntityAddress(addressLevel, displacement)) =>
               lift(displayRegister(frame.level, addressLevel)) >>= (emit(Instruction.opSTORE, 1, _ , displacement))
@@ -172,9 +172,9 @@ object CodeGenerator {
 
       case IfStmt(condition, stmt) => 
         for {
-          c1    <- encode(condition, env, frame)
+          c1    <- encode(env, frame)(condition)
           _     <- incrInstrCounter
-          c3    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
+          c3    <- stmt.map { encode(env, frame) }.getOrElse(skip)
           end   <- getInstrCounter
           c2    = instr(Instruction.opJUMPIF, 0, Instruction.rCB, end)
         } yield merge(c1, c2, c3)
@@ -183,48 +183,48 @@ object CodeGenerator {
       case WhileStmt(condition, stmt) => 
         for {
           start <- incrInstrCounter 
-          c2    <- stmt.map { encode(_, env, frame) }.getOrElse(skip)
+          c2    <- stmt.map { encode(env, frame) }.getOrElse(skip)
           after <- getInstrCounter
           c1    =  instr(Instruction.opJUMP, 0, Instruction.rCB, after)
-          c3    <- encode(condition, env, frame)
+          c3    <- encode(env, frame)(condition)
           c4    <- emit(Instruction.opJUMPIF, 1, Instruction.rCB, start)
         } yield merge(c1, c2, c3, c4)
 
 
       case PrintStmt(expr) => 
         for {
-          c1    <- encode(expr, env, frame)
-          c2    <- encode(CallStmt("!"), env, frame)
-          c3    <- encode(CallStmt("$puteol"), env, frame)
+          c1    <- encode(env, frame)(expr)
+          c2    <- encode(env, frame)(CallStmt("!"))
+          c3    <- encode(env, frame)(CallStmt("$puteol"))
         } yield merge(c1, c2, c3)
 
 
       case BinaryCondition(cond, left, right) => 
         for {
-          c1    <- encode(left, env, frame)
-          c2    <- encode(right, env, frame)
+          c1    <- encode(env, frame)(left)
+          c2    <- encode(env, frame)(right)
           c3    <- if (cond == "=" || cond == "#") emit(Instruction.opLOADL, 0, 0, 1)
                    else skip
-          c4    <- encode(CallStmt(cond), env, frame)
+          c4    <- encode(env, frame)(CallStmt(cond))
         } yield merge(c1, c2, c3, c4)
 
 
       case OddCondition(expr) => 
         for {
-          c1    <- encode(expr, env, frame)
+          c1    <- encode(env, frame)(expr)
           c2    <- emit(Instruction.opLOADL, 0, 0, 2)
-          c3    <- encode(CallStmt("$mod"), env, frame)
+          c3    <- encode(env, frame)(CallStmt("$mod"))
           c4    <- emit(Instruction.opLOADL, 0, 0, 0)
           c5    <- emit(Instruction.opLOADL, 0, 0, 1)
-          c6    <- encode(CallStmt("#"), env, frame)
+          c6    <- encode(env, frame)(CallStmt("#"))
         } yield merge(c1, c2, c3, c4, c5, c6)
 
 
       case BinOp(op, left, right) => 
         for {
-          c1    <- encode(left, env, frame)
-          c2    <- encode(right, env, frame)
-          c3    <- encode(CallStmt(op), env, frame)
+          c1    <- encode(env, frame)(left)
+          c2    <- encode(env, frame)(right)
+          c3    <- encode(env, frame)(CallStmt(op))
         } yield merge(c1, c2, c3)
 
 
