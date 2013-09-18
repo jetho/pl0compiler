@@ -1,4 +1,4 @@
-# A Compiler and Interpreter for Wirth's PL/0 Language
+## A Compiler and Interpreter for Wirth's PL/0 Language
 
 
 This Scala project provides an AST-based Interpreter and a TAM Bytecode Compiler for the PL/0 Programming Language by Niklaus Wirth.  
